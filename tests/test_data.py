@@ -46,7 +46,8 @@ def test_storage_roundtrip(tmp_path):
     df = _make_ohlcv(periods=70)  # 跨 3 个月，触发多分片
     save_ohlcv(df, "BTC/USDT:USDT", data_dir=tmp_path)
     loaded = load_ohlcv("BTC/USDT:USDT", data_dir=tmp_path)
-    pd.testing.assert_frame_equal(df, loaded)
+    # parquet 不保留 index.freq 元数据；数据本身应完全一致
+    pd.testing.assert_frame_equal(df, loaded, check_freq=False)
 
 
 def test_storage_idempotent_merge(tmp_path):

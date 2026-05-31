@@ -28,8 +28,13 @@ def _utc(ts) -> pd.Timestamp:
 
 
 def sanitize_symbol(symbol: str) -> str:
-    """``BTC/USDT:USDT`` / ``BTC/USDT`` -> ``BTCUSDT``（用于文件名，去除非字母数字）。"""
-    return re.sub(r"[^A-Za-z0-9]", "", symbol)
+    """``BTC/USDT:USDT`` / ``BTC/USDT`` -> ``BTCUSDT``（用于文件名）。
+
+    先去掉 ccxt 的 ``:settle`` 后缀（否则结算币会被并进文件名，如 BTCUSDTUSDT），
+    再去除非字母数字字符。
+    """
+    base = symbol.split(":")[0]
+    return re.sub(r"[^A-Za-z0-9]", "", base)
 
 
 def _shard_path(data_dir: str | Path, symbol: str, kind: str, year: int, month: int) -> Path:

@@ -50,6 +50,17 @@ class UniverseConfig:
 # ======================================================================
 
 
+def _align_tz(ts: pd.Timestamp, index: pd.Index) -> pd.Timestamp:
+    """把 ``ts`` 的时区对齐到面板索引：索引 tz-aware 则本地化/转换，否则去 tz。
+
+    避免 tz-aware 索引与 tz-naive 时间戳比较（pandas 3.0 会直接抛 TypeError）。
+    """
+    idx_tz = getattr(index, "tz", None)
+    if idx_tz is not None:
+        return ts.tz_localize(idx_tz) if ts.tz is None else ts.tz_convert(idx_tz)
+    return ts.tz_localize(None) if ts.tz is not None else ts
+
+
 def infer_listing_dates(dollar_volume: pd.DataFrame) -> pd.Series:
     """由成交额面板推断每个标的的"上市日"代理 = 第一条有效（非 NaN）数据日。
 
@@ -95,7 +106,7 @@ def select_universe(
         入选标的，按平均成交额降序。
     """
     config = config or UniverseConfig()
-    as_of = pd.Timestamp(as_of)
+    as_of = _align_tz(pd.Timestamp(as_of), dollar_volume.index)
     if listing_dates is None:
         listing_dates = infer_listing_dates(dollar_volume)
 
