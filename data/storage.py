@@ -1,8 +1,8 @@
 """本地存储：按标的 + 按月分片 parquet（Step 0-7）。
 
 命名（CLAUDE.md）：
-    OHLCV   : ``binance_perp_{symbol}_{timeframe}_{year}_{month:02d}.parquet``
-    funding : ``binance_perp_{symbol}_funding_{year}_{month:02d}.parquet``
+    OHLCV   : ``okx_perp_{symbol}_{timeframe}_{year}_{month:02d}.parquet``
+    funding : ``okx_perp_{symbol}_funding_{year}_{month:02d}.parquet``
 
 ``symbol`` 经 ``sanitize_symbol`` 规整（``BTC/USDT:USDT`` -> ``BTCUSDT``）。
 写入幂等：同一分片重复写会与已存数据按索引去重合并，支持断点续传。
@@ -39,7 +39,7 @@ def sanitize_symbol(symbol: str) -> str:
 
 def _shard_path(data_dir: str | Path, symbol: str, kind: str, year: int, month: int) -> Path:
     sym = sanitize_symbol(symbol)
-    fname = f"binance_perp_{sym}_{kind}_{year}_{month:02d}.parquet"
+    fname = f"okx_perp_{sym}_{kind}_{year}_{month:02d}.parquet"
     return Path(data_dir) / sym / fname
 
 
@@ -82,7 +82,7 @@ def save_funding(df: pd.DataFrame, symbol: str,
 def _load_sharded(symbol: str, kind: str, start, end, data_dir: str | Path) -> pd.DataFrame:
     sym = sanitize_symbol(symbol)
     base = Path(data_dir) / sym
-    pattern = f"binance_perp_{sym}_{kind}_*.parquet"
+    pattern = f"okx_perp_{sym}_{kind}_*.parquet"
     files = sorted(base.glob(pattern))
     if not files:
         logger.warning("_load_sharded: 未找到 {} {} 分片", symbol, kind)

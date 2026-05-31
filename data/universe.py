@@ -178,13 +178,13 @@ def build_universe_history(
 # ======================================================================
 
 
-def _make_binance_perp(exchange=None):
-    """返回一个配置好的 Binance USDⓈ-M 永续 ccxt 实例（懒加载 ccxt）。"""
+def _make_okx_perp(exchange=None):
+    """返回一个配置好的 OKX 永续 ccxt 实例（懒加载 ccxt）。"""
     if exchange is not None:
         return exchange
     import ccxt  # 懒加载：纯逻辑路径无需安装 ccxt
 
-    return ccxt.binanceusdm({"enableRateLimit": True})
+    return ccxt.okx({"enableRateLimit": True})
 
 
 def list_perpetual_symbols(exchange=None, quote: str = "USDT") -> list[str]:
@@ -192,7 +192,7 @@ def list_perpetual_symbols(exchange=None, quote: str = "USDT") -> list[str]:
 
     说明②：仅返回**现存**合约 —— 直接用于早期年份回测会有幸存者偏差。
     """
-    exchange = _make_binance_perp(exchange)
+    exchange = _make_okx_perp(exchange)
     markets = exchange.load_markets()
     symbols = [
         m["symbol"]
@@ -215,32 +215,32 @@ def load_dollar_volume_panel(
 ) -> pd.DataFrame:
     """拉取各标的日线，构造美元成交额宽表（index=日期, columns=symbol）。
 
-    仅用于动态池排名；正式研究数据请用 ``data/fetcher.py`` 的健壮分页版本。
+    复用 ``data/fetcher.py`` 的分页拉取（OKX 单次最多 100 根，必须分页）。
     dollar_volume ≈ close × base_volume（审计说明①）。
     """
-    exchange = _make_binance_perp(exchange)
+    from .fetcher import fetch_ohlcv  # 局部导入，避免纯逻辑路径牵入 fetcher
+
+    exchange = _make_okx_perp(exchange)
     if symbols is None:
         symbols = list_perpetual_symbols(exchange)
-    since_ms = int(pd.Timestamp(since).timestamp() * 1000) if since is not None else None
 
     series_map: dict[str, pd.Series] = {}
     for symbol in symbols:
         try:
-            ohlcv = exchange.fetch_ohlcv(symbol, timeframe="1d", since=since_ms, limit=1500)
+            df = fetch_ohlcv(symbol, timeframe="1d", since=since, until=until, exchange=exchange)
         except Exception as exc:  # noqa: BLE001 — 单标的失败不应中断整体
             logger.warning("拉取 {} 失败：{}", symbol, exc)
             continue
-        if not ohlcv:
+        if df.empty:
             continue
-        df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "volume"])
-        idx = pd.to_datetime(df["ts"], unit="ms", utc=True).dt.normalize()
+        idx = df.index.normalize()
         series_map[symbol] = pd.Series((df["close"] * df["volume"]).values, index=idx)
 
     if not series_map:
         return pd.DataFrame()
     panel = pd.DataFrame(series_map).sort_index()
     if until is not None:
-        panel = panel.loc[panel.index <= pd.Timestamp(until)]
+        panel = panel.loc[panel.index <= _align_tz(pd.Timestamp(until), panel.index)]
     return panel
 
 

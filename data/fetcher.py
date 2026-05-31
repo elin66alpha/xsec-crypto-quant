@@ -1,6 +1,7 @@
 """多标的数据拉取：OHLCV + funding rate，自动分页 + 断点续传（Step 0-6）。
 
-接口：Binance USDⓈ-M 永续（ccxt ``binanceusdm``），全部 REST（决策 B）。
+接口：OKX USDT 本位永续（ccxt ``okx``），全部 REST（决策 B）。
+（交易所由 Binance 改为 OKX：美国 IP 可直连 OKX，Binance 全球站对美 IP 451 封锁。）
 时间口径统一 UTC；返回的 DataFrame 以 ``datetime``（tz-aware UTC）为索引，升序、去重。
 
 断点续传：调用方传入 ``since``（如已存数据的最后时间戳 + 1 个 bar）即可从断点继续；
@@ -14,18 +15,20 @@ import time
 import pandas as pd
 from loguru import logger
 
-OHLCV_PAGE_LIMIT = 1500  # Binance fapi klines 单次上限
-FUNDING_PAGE_LIMIT = 1000  # fundingRate 单次上限
+# OKX 历史 K线 / funding 历史每次最多返回 100 条；PAGE_LIMIT 必须等于交易所单次上限，
+# 否则"返回数 < 请求数即视为末页"的判定会提前误停。
+OHLCV_PAGE_LIMIT = 100
+FUNDING_PAGE_LIMIT = 100
 MAX_EMPTY_PAGES = 2  # 连续空页则停止，避免死循环
 
 
-def make_binance_perp(exchange=None):
-    """配置好的 Binance USDⓈ-M 永续 ccxt 实例（懒加载 ccxt，开启限速）。"""
+def make_okx_perp(exchange=None):
+    """配置好的 OKX 永续 ccxt 实例（懒加载 ccxt，开启限速）。"""
     if exchange is not None:
         return exchange
     import ccxt
 
-    return ccxt.binanceusdm({"enableRateLimit": True})
+    return ccxt.okx({"enableRateLimit": True})
 
 
 def _to_ms(ts) -> int | None:
@@ -50,7 +53,7 @@ def fetch_ohlcv(
     Columns: open, high, low, close, volume。``since`` 缺省取该合约最早数据；
     ``until`` 缺省取当前时刻。可重复调用做断点续传（传入上次最后时间戳的下一个 bar）。
     """
-    exchange = make_binance_perp(exchange)
+    exchange = make_okx_perp(exchange)
     tf_ms = exchange.parse_timeframe(timeframe) * 1000
     cursor = _to_ms(since)
     until_ms = _to_ms(until) or exchange.milliseconds()
@@ -106,7 +109,7 @@ def fetch_funding_rate_history(
     DataFrame
         index = datetime（UTC，资金费结算时点，通常每 8h 一次），列 ``fundingRate``。
     """
-    exchange = make_binance_perp(exchange)
+    exchange = make_okx_perp(exchange)
     cursor = _to_ms(since)
     until_ms = _to_ms(until) or exchange.milliseconds()
 
@@ -154,7 +157,7 @@ def fetch_many_ohlcv(
     exchange=None,
 ) -> dict[str, pd.DataFrame]:
     """批量拉取多标的 OHLCV，单标的失败不中断整体。"""
-    exchange = make_binance_perp(exchange)
+    exchange = make_okx_perp(exchange)
     out: dict[str, pd.DataFrame] = {}
     for symbol in symbols:
         try:
