@@ -35,7 +35,7 @@ class ValidationReport:
     def add_warning(self, msg: str) -> None:
         self.warnings.append(msg)
 
-    def extend(self, other: "ValidationReport") -> "ValidationReport":
+    def extend(self, other: ValidationReport) -> ValidationReport:
         self.errors.extend(other.errors)
         self.warnings.extend(other.warnings)
         return self

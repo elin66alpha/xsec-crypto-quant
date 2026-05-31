@@ -50,7 +50,7 @@
 
 ### 决策 4：再平衡频率 —— 日频（已定）
 - **风险**：横截面策略换手率天然高，手续费 + 滑点是"回测漂亮、扣成本归零"的头号死法。
-- **最终选择**：**日频再平衡**。成本假设要狠（Binance taker 费率 + 真实滑点 + funding），宁可低估收益。
+- **最终选择**：**日频再平衡**。成本假设要狠（OKX taker 费率 + 真实滑点 + funding），宁可低估收益。
 - **配套（决策 4b）**：加**无操作带（no-trade band）**——仅当新信号与当前持仓差异超过阈值才调仓，抑制无谓换手。阈值是可调参数，需记录调整原因。
 
 ### 决策 5：因子横截面预处理 —— 截面 rank 起步（已定，先最简单）
@@ -129,7 +129,7 @@ Linux 或 macOS。
 
 ### Python 环境
 ```
-Python 3.11+
+Python 3.12+
 conda 管理虚拟环境
 环境名称：xsec-crypto-quant
 所有依赖必须装在此环境内，严禁向系统 Python 或 base 环境安装任何包
@@ -284,7 +284,7 @@ xsec-crypto-quant/
 
 **目标**：避免"把 edge 押在拿不到历史数据的特征上"。
 
-任务：制作一张表格，每个计划使用的因子写明：数据源、历史起始日、获取成本、是否可回测。原则——历史 L2 盘口（OBI/WMP/Depth）在 Binance REST 拿不到历史，**整体删除或降级为"从现在起录制、仅供未来 paper trading"**，不进历史回测。逐月历史市值快照确认 CoinGecko/CMC 可得。
+任务：制作一张表格，每个计划使用的因子写明：数据源、历史起始日、获取成本、是否可回测。原则——历史 L2 盘口（OBI/WMP/Depth）在交易所 REST 拿不到历史，**整体删除或降级为"从现在起录制、仅供未来 paper trading"**，不进历史回测。逐月历史市值快照确认 CoinGecko/CMC 可得。
 
 **验收**：审计表完成，所有进入阶段 1 的因子均确认历史可得。
 
@@ -296,10 +296,10 @@ xsec-crypto-quant/
 
 任务清单：
 1. 创建 conda 环境 `xsec-crypto-quant` 并安装全部依赖
-2. 创建 `.env.example`（BINANCE_API_KEY, BINANCE_SECRET, COINGECKO_API_KEY）
+2. 创建 `.env.example`（OKX_API_KEY, OKX_SECRET, OKX_PASSPHRASE, COINGECKO_API_KEY）
 3. `data/universe.py`：实现动态池（决策 1）——逐月按过去 30 天平均成交额选 Top 30 永续，上市满 90 天，输出每个月份的真实可交易成分列表
 4. `data/fetcher.py`：多标的 `fetch_ohlcv` 与 `fetch_funding_rate`，自动分页 + 断点续传
-5. `data/storage.py`：按标的 + 按月分片 parquet（命名 `binance_perp_{symbol}_1d_{year}_{month}.parquet`）
+5. `data/storage.py`：按标的 + 按月分片 parquet（命名 `okx_perp_{symbol}_1d_{year}_{month}.parquet`）
 6. `data/validate.py`：时间戳连续性、OHLCV 合法性、异常值检测、**池成分一致性**（确认无幸存者偏差）
 7. `tests/test_data.py` + `tests/test_universe.py` 全部通过
 8. `notebooks/01` + `02`：演示拉取→存储→读取，及动态池随时间演化的可视化
@@ -493,7 +493,7 @@ Locked holdout:最近 6~12 个月            （全周期只解锁一次，看�
 `live/vnpy_app.py`：
 ```
 - vnpy_paperaccount，初始 100,000 USDT 模拟
-- 永续合约，手续费 0.05%（Binance Taker），滑点 1 tick，逐期结算 funding
+- 永续合约，手续费 0.05%（OKX Taker），滑点 1 tick，逐期结算 funding
 - 实时 WebSocket 数据；每笔交易记录所有因子值、Regime、仓位、盈亏归因
 ```
 
@@ -571,7 +571,7 @@ Claude Code 全程用 git 管理本项目，规范如下。
 
 按顺序逐步执行，每步等用户确认后再继续，**每步完成即 git 提交**：
 
-- **Step 0-1**：`conda create -n xsec-crypto-quant python=3.11 -y` → 激活 → 输出环境信息让用户确认。
+- **Step 0-1**：`conda create -n xsec-crypto-quant python=3.12 -y` → 激活 → 输出环境信息让用户确认。
 - **Step 0-2**：创建目录骨架 + 空 `__init__.py` + `.gitignore` + `.env.example`；`git init`、首次提交、引导用户建 GitHub 私有仓库并 push。
 - **Step 0-3**：生成 `pyproject.toml`，安装依赖；等用户反馈安装结果，逐个解决失败包。
 - **Step 0-4**：（阶段 −0.5）先和用户一起完成数据可得性审计表，确认每个因子历史可得。
@@ -584,4 +584,4 @@ Claude Code 全程用 git 管理本项目，规范如下。
 
 ---
 
-*文档版本：v2.0 | 维度：横截面 Top N 永续 | 策略：日频多空中性（美元中性，单边≤1x/合计≤2x）| 因子预处理：截面 rank | 交易所：Binance | 定位：统计诚实的盈利研究 | 决策清单见第一部分*
+*文档版本：v2.0 | 维度：横截面 Top N 永续 | 策略：日频多空中性（美元中性，单边≤1x/合计≤2x）| 因子预处理：截面 rank | 交易所：OKX | 定位：统计诚实的盈利研究 | 决策清单见第一部分*

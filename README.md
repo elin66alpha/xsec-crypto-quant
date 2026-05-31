@@ -52,15 +52,15 @@
 
 ```bash
 # 1. 创建环境
-conda create -n xsec-crypto-quant python=3.11 -y
+conda create -n xsec-crypto-quant python=3.12 -y
 conda activate xsec-crypto-quant
 
-# 2. 安装依赖
-pip install -e .
+# 2. 安装依赖（含测试/开发工具）
+pip install -e ".[dev]"
 
 # 3. 配置密钥
 cp .env.example .env
-# 填入 BINANCE_API_KEY / BINANCE_SECRET / COINGECKO_API_KEY
+# 填入 OKX_API_KEY / OKX_SECRET / OKX_PASSPHRASE / COINGECKO_API_KEY
 
 # 4. 跑测试
 pytest -q

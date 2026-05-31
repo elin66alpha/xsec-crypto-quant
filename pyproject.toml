@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "xsec-crypto-quant"
 version = "2.0.0"
 description = "横截面加密货币多空量化研究项目（日频，多空中性，永续合约）"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 readme = "README.md"
 license = { text = "Proprietary" }
 
@@ -74,14 +74,14 @@ addopts = "-q"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]
 ignore = ["E501"]  # 行长由 line-length 控制，docstring 内长公式不强制
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true  # ccxt/vnpy/alphalens 等无完整 stub
