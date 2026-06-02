@@ -58,8 +58,32 @@ Phase 1 (cross-sectional feature engineering) is now complete in `features/`:
   `tests/test_carry.py`, `tests/test_orderflow.py` (50 tests total with Phase 0).
 - Done: teaching demos `notebooks/demo_phase1_cross_sectional.py` (rank concept) and
   `notebooks/demo_phase1_all_factors.py` (all factors + perf check).
-- Not done: Phase 2+ implementation. `factors/`, `regime/`, `strategy/`, `backtest/`,
-  and `live/` currently contain only `__init__.py`.
+
+Phase 2 (cross-sectional factor analysis) is now complete in `factors/`:
+
+- Done: `factors/ic_analysis.py` — `forward_return`, `cross_sectional_ic` (Spearman),
+  `ic_summary` (mean_ic / icir / hit_rate / t_stat); horizons 1D/3D/5D/10D.
+- Done: `factors/multiple_testing.py` — Benjamini-Hochberg FDR (`pvalue_from_tstat`,
+  `benjamini_hochberg`, `fdr_report`, `fdr_summary`); q is a parameter, default 0.10,
+  final value deferred until real p-value distribution is seen (record the reason).
+- Done: `factors/quantile_backtest.py` — `assign_quantiles`, `quantile_returns`,
+  `monotonicity`, `long_short_spread`, `quantile_backtest` (Q1→Q5 monotonicity).
+- Done: `factors/correlation.py` — `factor_correlation_matrix`, `select_low_correlation`
+  (drop |corr|>0.7 keeping higher ICIR, pool ≤ max_factors).
+- Done: `factors/selection.py` — `analyze_factors` orchestrates IC→FDR→correlation→
+  quantile into a `FactorAnalysis` result.
+- Done: `factors/report.py` — `render_html`/`save_html` self-contained HTML report
+  (IC/ICIR/FDR q-values table + CSS quantile bar charts), writes to `reports/` (gitignored).
+- Done: tests `tests/test_ic_analysis.py`, `test_multiple_testing.py`,
+  `test_quantile_backtest.py`, `test_correlation.py`, `test_selection.py`,
+  `test_report.py` (89 tests total with Phases 0–1).
+- Done: teaching demo `notebooks/demo_phase2_factor_analysis.py` (full IC→FDR→quantile→
+  correlation pipeline on planted ground-truth data + HTML report export).
+- Honest finding baked into the demo: FDR controls the false-discovery *rate* ≤ q but
+  does NOT guarantee zero — a pure-noise factor can slip through. This is exactly why
+  Phase 5 adds Deflated Sharpe + locked holdout as further defenses.
+- Not done: Phase 3+ implementation. `regime/`, `strategy/`, `backtest/`, and `live/`
+  currently contain only `__init__.py`.
 
 ## Verification Status
 
@@ -102,6 +126,13 @@ Phase 1 verification (this session ran on Windows 11, no conda available):
 - `pytest`: 50 passed. `ruff check`: passed. `mypy features`: no issues found.
 - Both Phase 1 demos run clean to completion; perf acceptance (single-day all-factor
   compute) measured ~0.03 ms, well under the 5 s bar.
+
+Phase 2 verification (also on Windows via the same gitignored `.venv`):
+
+- `pytest`: 89 passed. `ruff check factors/ tests/`: passed. `mypy factors features`:
+  no issues found (12 source files).
+- `notebooks/demo_phase2_factor_analysis.py` runs clean and exports
+  `reports/factor_analysis_demo.html`.
 
 For future sessions:
 
@@ -152,6 +183,14 @@ These are project invariants, not suggestions:
 - `features/orderflow.py`: CVD / Trade Delta, confirmation-only, not for historical backtest.
 - `tests/test_features.py` / `test_cross_sectional.py` / `test_carry.py` / `test_orderflow.py`: Phase 1 offline tests.
 - `notebooks/demo_phase1_cross_sectional.py` / `demo_phase1_all_factors.py`: Phase 1 teaching demos.
+- `factors/ic_analysis.py`: forward returns + cross-sectional IC/ICIR/t-stat.
+- `factors/multiple_testing.py`: Benjamini-Hochberg FDR (q parameterized, default 0.10).
+- `factors/quantile_backtest.py`: Q1→Q5 layered backtest + monotonicity.
+- `factors/correlation.py`: factor correlation matrix + low-correlation greedy selection.
+- `factors/selection.py`: `analyze_factors` end-to-end Phase 2 orchestration → `FactorAnalysis`.
+- `factors/report.py`: self-contained HTML factor-analysis report (no external deps).
+- `tests/test_ic_analysis.py` / `test_multiple_testing.py` / `test_quantile_backtest.py` / `test_correlation.py` / `test_selection.py` / `test_report.py`: Phase 2 offline tests.
+- `notebooks/demo_phase2_factor_analysis.py`: Phase 2 end-to-end teaching demo + HTML export.
 
 ## Next Agent Checklist
 
@@ -163,19 +202,20 @@ These are project invariants, not suggestions:
 
 ## Immediate Next Work
 
-Recommended next step after Phase 1 (Phase 2: cross-sectional factor analysis):
+Recommended next step after Phase 2 (Phase 3: market-level regime analysis):
 
-1. Begin Phase 2 in `factors/`: cross-sectional IC/ICIR via alphalens-reloaded against
-   `forward_return` at 1D/3D/5D/10D horizons. Factors consume `features/` raw outputs
-   ranked via `features.preprocess.cross_sectional_rank`.
-2. Add `factors/multiple_testing.py` (Benjamini-Hochberg FDR) BEFORE claiming any factor
-   is significant — N factors × 4 horizons will produce false positives uncorrected.
-3. Add `factors/quantile_backtest.py` (5-layer Q1→Q5 monotonicity) and
-   `factors/correlation.py` (drop >0.7-correlated, keep higher ICIR; final pool ≤ 10).
-4. Window N stays parameterized (`CANDIDATE_WINDOWS = 7/14/30/60/90`). Do NOT pick the
-   best N on full data — that is deferred to Phase 5 walk-forward.
-5. orderflow CVD/delta is confirmation-only; do not feed it into historical IC claims.
-6. Do not claim early-year unbiased results until a delisted-contract calendar is added.
+1. Begin Phase 3 in `regime/`: `market_regime.py` — 3-state HMM (low-vol / trend /
+   high-vol crisis) on market-level inputs (total-market realized vol, cross-sectional
+   correlation median, BTC dominance change, mean abs pool return). Expanding-window
+   refit only — NEVER fit on the full series then reuse states (look-ahead).
+2. `regime/correlation_spike.py` — detect cross-sectional correlation spikes → trigger
+   gross-leverage cut / flat (the correlation-crisis ironclad rule).
+3. `regime/risk_params.py` — REGIME_RISK_PARAMS leverage multipliers; result must still
+   respect the single-side ≤1x / gross ≤2x hard limits.
+4. The number of HMM states is a statistical parameter — ask the user before fixing it.
+5. Carry forward: window N parameterized (deferred to Phase 5 walk-forward); FDR q still
+   a pending decision; orderflow confirmation-only; no early-year unbiased claims until a
+   delisted-contract calendar exists.
 
 ## Handoff Protocol
 
@@ -198,17 +238,21 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch: Phase 1 closeout merged into `main`, tag `v0.1-features`; work was
-  done on branch `phase-1-features`.
-- Working tree changes: Phase 1 feature modules, their tests, two teaching demos, and this
-  handoff update.
+- Last commit/branch: Phase 2 closeout merged into `main`, tag `v0.2-factors`; work was
+  done on branch `phase-2-factors`. (Phase 1 = `v0.1-features`, Phase 0 = `v0.0-data`.)
+- Working tree changes: Phase 2 factor-analysis modules, their tests, one teaching demo,
+  and this handoff update.
 - Environment: this session ran on Windows 11 with no conda. Verified via a gitignored
   `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow). The canonical
   Linux/Miniconda path above still applies on the original dev machine.
-- What changed: added `features/{preprocess,cross_sectional,carry,orderflow}.py` plus
-  tests and `notebooks/demo_phase1_{cross_sectional,all_factors}.py`.
-- Commands run: `pytest -q`, `ruff check`, `mypy features`, and executed both demos.
-- Test results: `pytest` 50 passed; `ruff` passed; `mypy features` no issues; demos clean.
+- What changed: added `factors/{ic_analysis,multiple_testing,quantile_backtest,
+  correlation,selection,report}.py` plus tests and
+  `notebooks/demo_phase2_factor_analysis.py`.
+- Commands run: `pytest -q`, `ruff check factors/ tests/`, `mypy factors features`,
+  and executed the Phase 2 demo (exports `reports/factor_analysis_demo.html`).
+- Test results: `pytest` 89 passed; `ruff` passed; `mypy factors features` no issues; demo clean.
+- Pending decisions: FDR q (default 0.10, finalize after seeing real p-values); HMM state
+  count (ask before Phase 3); window N (deferred to Phase 5 walk-forward).
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Not pushed: merge + tag are local only; `origin` not updated this session (push on request).
-- Next recommended step: start Phase 2 factor analysis (IC/ICIR + FDR) in `factors/`.
+- Push status: confirm with the user before pushing `main` + `v0.2-factors` to origin.
+- Next recommended step: start Phase 3 market-level regime analysis in `regime/`.
