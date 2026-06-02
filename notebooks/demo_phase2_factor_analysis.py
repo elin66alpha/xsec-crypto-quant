@@ -47,6 +47,8 @@ from factors.ic_analysis import (  # noqa: E402
 )
 from factors.multiple_testing import fdr_report, fdr_summary  # noqa: E402
 from factors.quantile_backtest import quantile_backtest  # noqa: E402
+from factors.report import save_html  # noqa: E402
+from factors.selection import analyze_factors  # noqa: E402
 from features.carry import funding_carry, to_daily_funding  # noqa: E402
 from features.cross_sectional import (  # noqa: E402
     momentum,
@@ -193,6 +195,14 @@ def main() -> None:
     print("  （决策 12：没赚到 ≠ 失败,自欺地拿假因子去交易、亏钱,才是失败）。")
     print("  ⚠️ 本 demo 用虚构数据,只为验证流水线本身;真实判读须在真实数据上,")
     print("     且 q 值与 horizon 取舍要等真实 p 值分布出来再定并记录原因。")
+
+    # --- 6) 一行编排 + 生成 HTML 报告 ---
+    section("第 6 步｜一行编排 analyze_factors + 导出 HTML 报告")
+    analysis = analyze_factors(panels, close, horizons=tuple(horizons), q=0.10)
+    out = save_html(analysis, path="reports/factor_analysis_demo.html")
+    print(f"  selection.analyze_factors 一行跑完上面 1~4 步,精选池：{analysis.selected}")
+    print(f"  report.save_html 已生成报告：{out}")
+    print("  用浏览器打开它,即可看到 IC/ICIR/FDR q 值表 + 分层条形图 + 诚实声明。")
 
 
 if __name__ == "__main__":
