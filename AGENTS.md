@@ -104,8 +104,30 @@ Phase 3 (market-level regime analysis) is now complete in `regime/`:
   HMM flags crisis, spike fires earlier than HMM, gross leverage auto-cut 2.0x→0.4x, never
   breaches the 2x limit).
 - HMM state count fixed at 3 per user decision. hmmlearn added to the `.venv`.
-- Not done: Phase 4+ implementation. `strategy/`, `backtest/`, and `live/` currently
-  contain only `__init__.py`.
+
+Phase 4 (cross-sectional long/short strategy) is now complete in `strategy/`:
+
+- Done: `strategy/signal.py` — `cross_sectional_score` (centered rank per factor,
+  oriented by IC sign via `signs_from_mean_ic`, equal-weight `equal_weights`, NaN-friendly).
+- Done: `strategy/portfolio.py` — `build_target_weights` (long top / short bottom quantile,
+  equal-weight within leg, dollar-neutral, base gross 2x) and `apply_regime_leverage`
+  (regime+spike multiplier then hard clamp single≤1x/gross≤2x via `_clamp_row`).
+- Done: `strategy/rebalance.py` — `apply_no_trade_band` (decision 4b, default 0.05,
+  force-close on delist), `to_execution` (shift 1 bar = close-after-bar→next-open,
+  decision 9), `turnover`/`turnover_reduction`.
+- Done: `strategy/risk.py` — exposure helpers + `check_portfolio`/`assert_within_limits`
+  (reuses data-layer ValidationReport; gross/single-side breaches = error, off-neutral = warning).
+- Done: tests `tests/test_signal.py`, `test_portfolio.py`, `test_rebalance.py`,
+  `test_strategy_risk.py` (136 tests total with Phases 0–3).
+- Done: teaching demo `notebooks/demo_phase4_strategy.py` (factors→score→book→band→
+  regime-deleverage→execution→risk).
+- Pipeline-order finding from the demo: the no-trade band can drift gross/net, so the
+  leverage clamp MUST be the LAST transform (band on target first, then
+  apply_regime_leverage). A weight-delta band barely binds on an equal-weight quantile
+  book (discrete ±0.25 jumps) — membership hysteresis is the real turnover lever (Phase 5).
+- Decisions fixed by user: equal-weight factor combination; no-trade band parameterized
+  (default 0.05, finalize in Phase 5).
+- Not done: Phase 5+ implementation. `backtest/` and `live/` currently contain only `__init__.py`.
 
 ## Verification Status
 
@@ -161,6 +183,12 @@ Phase 3 verification (Windows, same `.venv` + `pip install hmmlearn`):
 - `pytest`: 107 passed. `ruff check regime/ tests/`: passed. `mypy regime factors
   features`: no issues found (16 source files).
 - `notebooks/demo_phase3_regime.py` runs clean (hmmlearn convergence logs silenced).
+
+Phase 4 verification (Windows, same `.venv`):
+
+- `pytest`: 136 passed. `ruff check strategy/ tests/`: passed. `mypy strategy regime
+  factors features`: no issues found (21 source files).
+- `notebooks/demo_phase4_strategy.py` runs clean; risk check passes (gross ≤ 2x held).
 
 For future sessions:
 
@@ -224,6 +252,12 @@ These are project invariants, not suggestions:
 - `regime/risk_params.py`: regime→leverage multiplier + hard single≤1x/gross≤2x clamps.
 - `tests/test_market_regime.py` / `test_correlation_spike.py` / `test_risk_params.py`: Phase 3 offline tests.
 - `notebooks/demo_phase3_regime.py`: Phase 3 teaching demo (crisis → auto-deleverage).
+- `strategy/signal.py`: multi-factor cross-sectional score (IC-signed, equal-weight).
+- `strategy/portfolio.py`: long/short dollar-neutral weights + regime leverage + hard clamps.
+- `strategy/rebalance.py`: no-trade band + next-bar-open execution shift + turnover.
+- `strategy/risk.py`: portfolio exposure checks (gross/single-side/neutrality).
+- `tests/test_signal.py` / `test_portfolio.py` / `test_rebalance.py` / `test_strategy_risk.py`: Phase 4 offline tests.
+- `notebooks/demo_phase4_strategy.py`: Phase 4 end-to-end strategy demo.
 
 ## Next Agent Checklist
 
@@ -235,22 +269,24 @@ These are project invariants, not suggestions:
 
 ## Immediate Next Work
 
-Recommended next step after Phase 3 (Phase 4: cross-sectional long/short strategy):
+Recommended next step after Phase 4 (Phase 5: backtest — the statistical-honesty core):
 
-1. Begin Phase 4 in `strategy/`: `signal.py` — multi-factor cross-sectional score
-   (equal-weight or simple linear combo of the Phase-2 selected factors, ranked via
-   `features.preprocess.cross_sectional_rank`). Factor directions/weights come from the
-   Phase-2 IC signs, not guesses.
-2. `strategy/portfolio.py` — long top quantile / short bottom quantile, equal-weight
-   within each leg, dollar-neutral (decisions 6/7); then apply the Phase-3 regime
-   leverage multiplier and re-clamp to single ≤1x / gross ≤2x (decision 8).
-3. `strategy/rebalance.py` — daily rebalance with a no-trade band (decision 4b); signal
-   uses close-after-bar, executes next-bar open (decision 9).
-4. Decisions to surface to the user: factor combination weights and the no-trade-band
-   threshold are tunable parameters — ask before fixing.
-5. Carry forward: window N deferred to Phase 5 walk-forward; FDR q and corr-spike
-   thresholds still pending; orderflow confirmation-only; no early-year unbiased claims
-   until a delisted-contract calendar exists.
+1. Three-way split (ironclad): in-sample 2020–2022 (factor screening, rough ranges),
+   validation 2023 (final parameter choice, day-to-day iteration), locked holdout last
+   6–12 months (unlocked ONCE for the whole project). Tag `pre-holdout-freeze` before unlock.
+2. `backtest/xsec_runner.py` — cross-sectional long/short backtester: rank/group/equal-
+   weight/portfolio PnL/per-period funding/turnover cost (taker fee + slippage + funding).
+3. `backtest/metrics.py` — annualized/drawdown/Sharpe/Sortino/Calmar with bootstrap CIs
+   (not point estimates), quantile monotonicity, realized BTC beta, turnover, win rate.
+4. `backtest/overfitting_check.py` + `deflated_sharpe.py` — parameter sensitivity,
+   walk-forward (train 18M / val 6M / step 3M), Monte Carlo bootstrap 1000×, Deflated
+   Sharpe (penalize the number of trials). This is where window N / quantile / band / q /
+   corr-spike thresholds finally get chosen out-of-sample.
+5. Verdict per decision 12: if edge is robust → Phase 6 paper trading; if FDR-corrected
+   significance fails or cost-adjusted Sharpe CI includes 0 → record the honest negative
+   result, do NOT tune to force it. Either outcome is a successful project.
+6. Carry forward: no early-year unbiased claims until a delisted-contract calendar exists;
+   orderflow confirmation-only.
 
 ## Handoff Protocol
 
@@ -273,22 +309,23 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch: Phase 3 closeout merged into `main`, tag `v0.3-regime`; work was
-  done on branch `phase-3-regime`. (Phase 2 = `v0.2-factors`, Phase 1 = `v0.1-features`,
-  Phase 0 = `v0.0-data`.)
-- Working tree changes: Phase 3 regime modules, their tests, one teaching demo, and this
+- Last commit/branch: Phase 4 closeout merged into `main`, tag `v0.4-strategy`; work was
+  done on branch `phase-4-strategy`. (Phase 3 = `v0.3-regime`, Phase 2 = `v0.2-factors`,
+  Phase 1 = `v0.1-features`, Phase 0 = `v0.0-data`.)
+- Working tree changes: Phase 4 strategy modules, their tests, one teaching demo, and this
   handoff update.
 - Environment: this session ran on Windows 11 with no conda. Verified via a gitignored
   `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow/hmmlearn). The
   canonical Linux/Miniconda path above still applies on the original dev machine.
-- What changed: added `regime/{market_regime,correlation_spike,risk_params}.py` plus tests
-  and `notebooks/demo_phase3_regime.py`.
-- Commands run: `pytest -q`, `ruff check regime/ tests/`, `mypy regime factors features`,
-  and executed the Phase 3 demo.
-- Test results: `pytest` 107 passed; `ruff` passed; `mypy` no issues (16 files); demo clean.
-- Pending decisions: FDR q (default 0.10); corr-spike thresholds (default conservative);
-  factor-combo weights + no-trade-band (Phase 4, ask before fixing); window N (Phase 5
-  walk-forward). HMM states fixed at 3 per user.
+- What changed: added `strategy/{signal,portfolio,rebalance,risk}.py` plus tests and
+  `notebooks/demo_phase4_strategy.py`.
+- Commands run: `pytest -q`, `ruff check strategy/ tests/`, `mypy strategy regime factors
+  features`, and executed the Phase 4 demo.
+- Test results: `pytest` 136 passed; `ruff` passed; `mypy` no issues (21 files); demo clean.
+- Pending decisions (all land in Phase 5 walk-forward, chosen out-of-sample): window N,
+  quantile width, no-trade band, FDR q, corr-spike thresholds. Fixed: HMM states = 3;
+  equal-weight factor combination.
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Push status: confirm with the user before pushing `main` + `v0.3-regime` to origin.
-- Next recommended step: start Phase 4 cross-sectional long/short strategy in `strategy/`.
+- Push status: confirm with the user before pushing `main` + `v0.4-strategy` to origin.
+- Next recommended step: start Phase 5 backtest (three-way split, costs, Deflated Sharpe,
+  locked holdout) in `backtest/`.
