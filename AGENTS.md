@@ -82,8 +82,30 @@ Phase 2 (cross-sectional factor analysis) is now complete in `factors/`:
 - Honest finding baked into the demo: FDR controls the false-discovery *rate* ≤ q but
   does NOT guarantee zero — a pure-noise factor can slip through. This is exactly why
   Phase 5 adds Deflated Sharpe + locked holdout as further defenses.
-- Not done: Phase 3+ implementation. `regime/`, `strategy/`, `backtest/`, and `live/`
-  currently contain only `__init__.py`.
+
+Phase 3 (market-level regime analysis) is now complete in `regime/`:
+
+- Done: `regime/market_regime.py` — pure feature layer (`compute_market_features`:
+  market_vol / xs_corr_median / mean_abs_return) + HMM layer (lazy hmmlearn):
+  `fit_hmm` (3-state GaussianHMM), `_vol_order_mapping` (raw states → low0/trend1/crisis2
+  by volatility), `label_regimes_full` (full-sample, look-ahead, RESEARCH ONLY), and
+  `label_regimes_expanding` (expanding-window, no look-ahead, the honest default for backtest).
+  BTC dominance feature deferred (needs market-cap data) — recorded, not blocking.
+- Done: `regime/correlation_spike.py` — ironclad rule 2: `correlation_spike_signal`
+  (absolute >threshold OR relative z-score vs shift(1) trailing baseline) and
+  `detect_correlation_spike`. Thresholds parameterized, default conservative, finalize on
+  real data and record the reason.
+- Done: `regime/risk_params.py` — REGIME_RISK_PARAMS (crisis→0.2x), `effective_gross_
+  multiplier` (HMM regime AND corr-spike, take the more conservative), and hard clamps
+  `clamp_gross`/`clamp_single_side`/`apply_regime_leverage` (single ≤1x, gross ≤2x, fixed).
+- Done: tests `tests/test_market_regime.py`, `test_correlation_spike.py`,
+  `test_risk_params.py` (107 tests total with Phases 0–2).
+- Done: teaching demo `notebooks/demo_phase3_regime.py` (calm→crisis→calm: features rise,
+  HMM flags crisis, spike fires earlier than HMM, gross leverage auto-cut 2.0x→0.4x, never
+  breaches the 2x limit).
+- HMM state count fixed at 3 per user decision. hmmlearn added to the `.venv`.
+- Not done: Phase 4+ implementation. `strategy/`, `backtest/`, and `live/` currently
+  contain only `__init__.py`.
 
 ## Verification Status
 
@@ -133,6 +155,12 @@ Phase 2 verification (also on Windows via the same gitignored `.venv`):
   no issues found (12 source files).
 - `notebooks/demo_phase2_factor_analysis.py` runs clean and exports
   `reports/factor_analysis_demo.html`.
+
+Phase 3 verification (Windows, same `.venv` + `pip install hmmlearn`):
+
+- `pytest`: 107 passed. `ruff check regime/ tests/`: passed. `mypy regime factors
+  features`: no issues found (16 source files).
+- `notebooks/demo_phase3_regime.py` runs clean (hmmlearn convergence logs silenced).
 
 For future sessions:
 
@@ -191,6 +219,11 @@ These are project invariants, not suggestions:
 - `factors/report.py`: self-contained HTML factor-analysis report (no external deps).
 - `tests/test_ic_analysis.py` / `test_multiple_testing.py` / `test_quantile_backtest.py` / `test_correlation.py` / `test_selection.py` / `test_report.py`: Phase 2 offline tests.
 - `notebooks/demo_phase2_factor_analysis.py`: Phase 2 end-to-end teaching demo + HTML export.
+- `regime/market_regime.py`: market features + 3-state HMM (full=research, expanding=honest).
+- `regime/correlation_spike.py`: correlation-spike detector (ironclad rule 2).
+- `regime/risk_params.py`: regime→leverage multiplier + hard single≤1x/gross≤2x clamps.
+- `tests/test_market_regime.py` / `test_correlation_spike.py` / `test_risk_params.py`: Phase 3 offline tests.
+- `notebooks/demo_phase3_regime.py`: Phase 3 teaching demo (crisis → auto-deleverage).
 
 ## Next Agent Checklist
 
@@ -202,20 +235,22 @@ These are project invariants, not suggestions:
 
 ## Immediate Next Work
 
-Recommended next step after Phase 2 (Phase 3: market-level regime analysis):
+Recommended next step after Phase 3 (Phase 4: cross-sectional long/short strategy):
 
-1. Begin Phase 3 in `regime/`: `market_regime.py` — 3-state HMM (low-vol / trend /
-   high-vol crisis) on market-level inputs (total-market realized vol, cross-sectional
-   correlation median, BTC dominance change, mean abs pool return). Expanding-window
-   refit only — NEVER fit on the full series then reuse states (look-ahead).
-2. `regime/correlation_spike.py` — detect cross-sectional correlation spikes → trigger
-   gross-leverage cut / flat (the correlation-crisis ironclad rule).
-3. `regime/risk_params.py` — REGIME_RISK_PARAMS leverage multipliers; result must still
-   respect the single-side ≤1x / gross ≤2x hard limits.
-4. The number of HMM states is a statistical parameter — ask the user before fixing it.
-5. Carry forward: window N parameterized (deferred to Phase 5 walk-forward); FDR q still
-   a pending decision; orderflow confirmation-only; no early-year unbiased claims until a
-   delisted-contract calendar exists.
+1. Begin Phase 4 in `strategy/`: `signal.py` — multi-factor cross-sectional score
+   (equal-weight or simple linear combo of the Phase-2 selected factors, ranked via
+   `features.preprocess.cross_sectional_rank`). Factor directions/weights come from the
+   Phase-2 IC signs, not guesses.
+2. `strategy/portfolio.py` — long top quantile / short bottom quantile, equal-weight
+   within each leg, dollar-neutral (decisions 6/7); then apply the Phase-3 regime
+   leverage multiplier and re-clamp to single ≤1x / gross ≤2x (decision 8).
+3. `strategy/rebalance.py` — daily rebalance with a no-trade band (decision 4b); signal
+   uses close-after-bar, executes next-bar open (decision 9).
+4. Decisions to surface to the user: factor combination weights and the no-trade-band
+   threshold are tunable parameters — ask before fixing.
+5. Carry forward: window N deferred to Phase 5 walk-forward; FDR q and corr-spike
+   thresholds still pending; orderflow confirmation-only; no early-year unbiased claims
+   until a delisted-contract calendar exists.
 
 ## Handoff Protocol
 
@@ -238,21 +273,22 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch: Phase 2 closeout merged into `main`, tag `v0.2-factors`; work was
-  done on branch `phase-2-factors`. (Phase 1 = `v0.1-features`, Phase 0 = `v0.0-data`.)
-- Working tree changes: Phase 2 factor-analysis modules, their tests, one teaching demo,
-  and this handoff update.
+- Last commit/branch: Phase 3 closeout merged into `main`, tag `v0.3-regime`; work was
+  done on branch `phase-3-regime`. (Phase 2 = `v0.2-factors`, Phase 1 = `v0.1-features`,
+  Phase 0 = `v0.0-data`.)
+- Working tree changes: Phase 3 regime modules, their tests, one teaching demo, and this
+  handoff update.
 - Environment: this session ran on Windows 11 with no conda. Verified via a gitignored
-  `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow). The canonical
-  Linux/Miniconda path above still applies on the original dev machine.
-- What changed: added `factors/{ic_analysis,multiple_testing,quantile_backtest,
-  correlation,selection,report}.py` plus tests and
-  `notebooks/demo_phase2_factor_analysis.py`.
-- Commands run: `pytest -q`, `ruff check factors/ tests/`, `mypy factors features`,
-  and executed the Phase 2 demo (exports `reports/factor_analysis_demo.html`).
-- Test results: `pytest` 89 passed; `ruff` passed; `mypy factors features` no issues; demo clean.
-- Pending decisions: FDR q (default 0.10, finalize after seeing real p-values); HMM state
-  count (ask before Phase 3); window N (deferred to Phase 5 walk-forward).
+  `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow/hmmlearn). The
+  canonical Linux/Miniconda path above still applies on the original dev machine.
+- What changed: added `regime/{market_regime,correlation_spike,risk_params}.py` plus tests
+  and `notebooks/demo_phase3_regime.py`.
+- Commands run: `pytest -q`, `ruff check regime/ tests/`, `mypy regime factors features`,
+  and executed the Phase 3 demo.
+- Test results: `pytest` 107 passed; `ruff` passed; `mypy` no issues (16 files); demo clean.
+- Pending decisions: FDR q (default 0.10); corr-spike thresholds (default conservative);
+  factor-combo weights + no-trade-band (Phase 4, ask before fixing); window N (Phase 5
+  walk-forward). HMM states fixed at 3 per user.
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Push status: confirm with the user before pushing `main` + `v0.2-factors` to origin.
-- Next recommended step: start Phase 3 market-level regime analysis in `regime/`.
+- Push status: confirm with the user before pushing `main` + `v0.3-regime` to origin.
+- Next recommended step: start Phase 4 cross-sectional long/short strategy in `strategy/`.
