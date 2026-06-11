@@ -9,7 +9,7 @@
 
 ## P0 —— 动摇统计结论，上真实数据前必须修
 
-### 1. `[ ]` 重叠前向收益导致 IC 的 t 统计量被系统性高估
+### 1. `[x]` 重叠前向收益导致 IC 的 t 统计量被系统性高估（commit eb10617，codex-w1 实现 / claude-lead 审核；HAC/裸 t 比值：模拟 10D 重叠序列 0.38、白噪声 0.94）
 
 - **位置**：`factors/ic_analysis.py`（`ic_summary` 的 `t_stat = ICIR × sqrt(N)`）→ 下游 `factors/multiple_testing.py`（FDR 建在这些 p 值上）。
 - **问题**：horizon = 3D/5D/10D 时前向收益逐日滚动计算，相邻观测共享绝大部分数据（10D 下相邻两天共享 9 天），IC 序列高度自相关，有效样本量远小于 N。`t = ICIR×√N` 假设 IC 独立同分布，t 值在 10D 下可能虚高 2–3 倍。
@@ -34,7 +34,7 @@
   1. 能拉到 → 用 OKX 官方下架公告/第三方数据整理"退市日历 + instId 清单"，补全历史池；
   2. 拉不到 → 在审计表记录一条**有界偏差**：退市币的价格序列以 Binance 归档（data.binance.vision）替代、其余全部 OKX，并在回测报告中披露该混合口径只影响已退市标的。
 
-### 3. 退市/数据中断的损失被静默吞掉
+### 3. `[x]` 退市/数据中断的损失被静默吞掉（commit 7bbfc36：缺失收益按最后有效价标记一根 bar 后强平、计成本，新增 missing_return_exposure 序列 + RuntimeWarning）
 
 - **位置**：`backtest/xsec_runner.py`（`gross_return = (execution * asset_returns.fillna(0.0)).sum(axis=1)`）。
 - **问题**：持仓标的价格数据中断（退市、停牌）时按 0 收益记账，随后"免费"平仓。等于假设总能在崩盘前以原价逃出。决策 10 要求"按最后可成交价标记 + 下个 rebalance 强平"，未实现。
@@ -43,7 +43,7 @@
   2. 实现决策 10：标的离池/数据中断 → 下一 bar 强平，期间按最后有效价格的收益（而非 0）标记；
   3. 报告里强制展示"缺失收益敞口"统计，超过阈值的回测结果视为不可信。
 
-### 4. IID bootstrap 给出过窄的置信区间（且注释称其"保守"，方向反了）
+### 4. `[x]` IID bootstrap 给出过窄的置信区间（commit a8152ee：bootstrap_ci 默认 circular block bootstrap，block_length=20 为显式记录参数；IID 版保留为 iid_bootstrap_ci 仅作对照）
 
 - **位置**：`backtest/metrics.py`（`bootstrap_ci`，注释"保守不确定性显示"）。
 - **问题**：日收益有波动率聚集与自相关，IID 重采样打散了这种结构，**低估** Sharpe 的方差、CI 过窄 → 偏向"假装更确定"。决策 12 的判定（CI 是否含 0）直接依赖这个区间。
