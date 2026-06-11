@@ -43,11 +43,23 @@ def monte_carlo_bootstrap(
     statistic: Callable[[pd.Series], float] | None = None,
     n_bootstrap: int = 1000,
     seed: int = 0,
+    block_length: int = 20,
 ) -> dict[str, float]:
-    """Monte Carlo bootstrap；默认统计量为年化 Sharpe。"""
+    """Monte Carlo circular block bootstrap；默认统计量为年化 Sharpe。"""
     statistic = statistic or (lambda x: sharpe_ratio(x, TRADING_DAYS_CRYPTO))
-    lo, hi = bootstrap_ci(returns, statistic, n_bootstrap=n_bootstrap, seed=seed)
-    return {"ci_low": lo, "ci_high": hi, "n_bootstrap": float(n_bootstrap)}
+    lo, hi = bootstrap_ci(
+        returns,
+        statistic,
+        n_bootstrap=n_bootstrap,
+        seed=seed,
+        block_length=block_length,
+    )
+    return {
+        "ci_low": lo,
+        "ci_high": hi,
+        "n_bootstrap": float(n_bootstrap),
+        "block_length": float(block_length),
+    }
 
 
 def select_validation_candidate(

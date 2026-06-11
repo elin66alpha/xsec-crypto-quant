@@ -32,7 +32,9 @@ def test_compute_ic_summaries_keys():
     summ = compute_ic_summaries(panels, close, horizons=(1, 5))
     assert set(summ) == {f"{n}@{h}d" for n in panels for h in (1, 5)}
     for s in summ.values():
-        assert {"mean_ic", "icir", "t_stat", "n_obs"}.issubset(s)
+        assert {"mean_ic", "icir", "t_stat", "n_obs", "se_mean", "hac_lags"}.issubset(s)
+    assert summ["momentum_10@1d"]["hac_lags"] == 0
+    assert summ["momentum_10@5d"]["hac_lags"] == 4
 
 
 def test_analyze_factors_momentum_survives_and_pruned():

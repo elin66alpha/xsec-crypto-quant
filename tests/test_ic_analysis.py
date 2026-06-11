@@ -92,6 +92,30 @@ def test_ic_summary_known_values():
     assert s["hit_rate"] == pytest.approx(0.5)
     assert s["t_stat"] == pytest.approx(0.0)
     assert s["n_obs"] == 2
+    assert s["se_mean"] == pytest.approx(1.0)
+    assert s["hac_lags"] == 0
+
+
+def test_ic_summary_hac_lags_zero_matches_legacy_keys():
+    """hac_lags=0 保持旧版逐键结果：裸 ICIR*sqrt(N) t 值不变。"""
+    ic = pd.Series([0.04, -0.01, 0.03, np.nan, 0.02, 0.00])
+    s = ic_summary(ic, hac_lags=0)
+    valid = ic.dropna()
+    mean_ic = float(valid.mean())
+    std_ic = float(valid.std(ddof=1))
+    icir = mean_ic / std_ic
+    expected = {
+        "mean_ic": mean_ic,
+        "std_ic": std_ic,
+        "icir": icir,
+        "hit_rate": float((valid > 0).mean()),
+        "t_stat": icir * np.sqrt(len(valid)),
+        "n_obs": len(valid),
+    }
+    for key, value in expected.items():
+        assert s[key] == pytest.approx(value)
+    assert s["se_mean"] == pytest.approx(std_ic / np.sqrt(len(valid)))
+    assert s["hac_lags"] == 0
 
 
 def test_ic_summary_positive_stable():
@@ -108,3 +132,32 @@ def test_ic_summary_empty():
     s = ic_summary(pd.Series([np.nan, np.nan]))
     assert s["n_obs"] == 0
     assert np.isnan(s["mean_ic"])
+    assert np.isnan(s["se_mean"])
+    assert s["hac_lags"] == 0
+
+
+def test_ic_summary_hac_t_stat_smaller_for_autocorrelated_ic():
+    """强正自相关 IC 序列下,HAC t 值应显著低于裸 ICIR*sqrt(N)。"""
+    rng = np.random.default_rng(42)
+    raw = pd.Series(rng.normal(0.0, 0.08, size=2_000))
+    ic = raw.rolling(10).mean().dropna() + 0.01
+    naive = ic_summary(ic, hac_lags=0)
+    hac = ic_summary(ic, hac_lags=9)
+    assert hac["t_stat"] < naive["t_stat"] * 0.55
+    assert hac["se_mean"] > naive["se_mean"]
+    assert hac["hac_lags"] == 9
+
+
+def test_ic_summary_hac_close_to_naive_for_white_noise_ic():
+    """白噪声 IC 几乎无自相关,HAC 与裸 t 值应大体接近。"""
+    rng = np.random.default_rng(7)
+    ic = pd.Series(rng.normal(0.02, 0.10, size=5_000))
+    naive = ic_summary(ic, hac_lags=0)
+    hac = ic_summary(ic, hac_lags=9)
+    ratio = hac["t_stat"] / naive["t_stat"]
+    assert 0.7 < ratio < 1.3
+
+
+def test_ic_summary_negative_hac_lags_rejected():
+    with pytest.raises(ValueError):
+        ic_summary(pd.Series([0.1, 0.2]), hac_lags=-1)

@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -50,6 +51,7 @@ class BacktestResult:
     net_return: pd.Series
     equity_curve: pd.Series
     turnover: pd.Series
+    missing_return_exposure: pd.Series
 
     def to_frame(self) -> pd.DataFrame:
         """组合层逐期结果表。"""
@@ -61,6 +63,7 @@ class BacktestResult:
                 "net_return": self.net_return,
                 "equity": self.equity_curve,
                 "turnover": self.turnover,
+                "missing_return_exposure": self.missing_return_exposure,
             }
         )
 
@@ -78,6 +81,33 @@ def _align_like_weights(data: pd.DataFrame | None, weights: pd.DataFrame, fill: 
         return pd.DataFrame(fill, index=weights.index, columns=weights.columns)
     aligned = data.reindex(index=weights.index, columns=weights.columns)
     return aligned.fillna(fill)
+
+
+def _force_close_missing_return_exposure(
+    execution: pd.DataFrame,
+    raw_asset_returns: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.Series]:
+    """非零持仓遇到缺失收益时记录敞口,并在下一 bar 强制平仓。"""
+    if execution.empty:
+        return execution.copy(), pd.Series(dtype=float, name="missing_return_exposure")
+
+    values = execution.to_numpy(dtype=float, copy=True)
+    missing_returns = raw_asset_returns.isna().to_numpy()
+    exposure = np.zeros(len(execution), dtype=float)
+
+    # 最后一行没有下一根 open,不是数据中断；不把正常样本尾部计作缺失收益敞口。
+    for i in range(len(execution) - 1):
+        missing_active = (values[i] != 0.0) & missing_returns[i]
+        if not missing_active.any():
+            continue
+        exposure[i] = float(np.abs(values[i, missing_active]).sum())
+        values[i + 1, missing_active] = 0.0
+
+    adjusted = pd.DataFrame(values, index=execution.index, columns=execution.columns)
+    missing_exposure = pd.Series(
+        exposure, index=execution.index, name="missing_return_exposure"
+    )
+    return adjusted, missing_exposure
 
 
 def run_backtest(
@@ -119,6 +149,7 @@ def run_backtest(
             net_return=empty_series,
             equity_curve=empty_series,
             turnover=empty_series,
+            missing_return_exposure=empty_series,
         )
 
     target = build_target_weights(score, quantile=config.quantile)
@@ -126,8 +157,22 @@ def run_backtest(
     risk_adjusted = apply_regime_leverage(banded, regime=regime, corr_spike=corr_spike)
     execution = to_execution(risk_adjusted).fillna(0.0)
 
-    asset_returns = open_to_open_returns(open_prices).reindex_like(execution)
-    gross_return = (execution * asset_returns.fillna(0.0)).sum(axis=1).rename("gross_return")
+    raw_asset_returns = open_to_open_returns(open_prices).reindex_like(execution)
+    execution, missing_return_exposure = _force_close_missing_return_exposure(
+        execution, raw_asset_returns
+    )
+    missing_periods = int((missing_return_exposure > 0.0).sum())
+    if missing_periods:
+        warnings.warn(
+            "持仓标的存在缺失 open-to-open 收益；已按最后有效价格标记并在下一 bar 强制平仓。"
+            f" periods={missing_periods}, "
+            f"total_abs_exposure={float(missing_return_exposure.sum()):.6f}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+    asset_returns = open_to_open_returns(open_prices.ffill()).reindex_like(execution)
+    gross_return = (execution * asset_returns).sum(axis=1).rename("gross_return")
 
     funding = _align_like_weights(funding_rates, execution, fill=0.0)
     funding_pnl = (-(execution * funding).sum(axis=1)).rename("funding_pnl")
@@ -149,4 +194,5 @@ def run_backtest(
         net_return=net_return,
         equity_curve=equity,
         turnover=trade_turnover,
+        missing_return_exposure=missing_return_exposure,
     )

@@ -99,27 +99,78 @@ def realized_beta(strategy_returns: pd.Series, benchmark_returns: pd.Series) -> 
     return float(aligned.iloc[:, 0].cov(x) / var)
 
 
-def bootstrap_ci(
+def _validate_bootstrap_args(n_bootstrap: int, ci: float) -> None:
+    if n_bootstrap <= 0:
+        raise ValueError("n_bootstrap 必须为正")
+    if not 0.0 < ci < 1.0:
+        raise ValueError("ci 必须在 (0, 1)")
+
+
+def iid_bootstrap_ci(
     values: pd.Series,
     statistic: Callable[[pd.Series], float],
     n_bootstrap: int = 1000,
     ci: float = 0.95,
     seed: int = 0,
 ) -> tuple[float, float]:
-    """IID bootstrap 置信区间；用于点估计旁边的保守不确定性显示。"""
+    """IID bootstrap 置信区间；仅作与 block bootstrap 对照。
+
+    日收益常有自相关与波动率聚集,IID 重采样会打散这种结构,通常低估 Sharpe/均值统计量
+    的不确定性。阶段 5 的正式 CI 默认使用 ``bootstrap_ci`` 的 circular block bootstrap。
+    """
     clean = _clean_returns(values)
     if clean.empty:
         return (float("nan"), float("nan"))
-    if n_bootstrap <= 0:
-        raise ValueError("n_bootstrap 必须为正")
-    if not 0.0 < ci < 1.0:
-        raise ValueError("ci 必须在 (0, 1)")
+    _validate_bootstrap_args(n_bootstrap, ci)
 
     rng = np.random.default_rng(seed)
     stats = np.empty(n_bootstrap, dtype=float)
     arr = clean.to_numpy()
     for i in range(n_bootstrap):
         sample = pd.Series(rng.choice(arr, size=len(arr), replace=True))
+        stats[i] = statistic(sample)
+    alpha = (1.0 - ci) / 2.0
+    return (float(np.nanquantile(stats, alpha)), float(np.nanquantile(stats, 1.0 - alpha)))
+
+
+def _circular_block_sample(arr: np.ndarray, rng: np.random.Generator, block_length: int) -> np.ndarray:
+    """从一维数组抽 circular fixed-length blocks,拼到原样本长度。"""
+    n = int(len(arr))
+    effective_block = min(block_length, n)
+    n_blocks = int(np.ceil(n / effective_block))
+    starts = rng.integers(0, n, size=n_blocks)
+    offsets = np.arange(effective_block)
+    idx = (starts[:, None] + offsets[None, :]) % n
+    sample: np.ndarray = arr[idx.ravel()[:n]]
+    return sample
+
+
+def bootstrap_ci(
+    values: pd.Series,
+    statistic: Callable[[pd.Series], float],
+    n_bootstrap: int = 1000,
+    ci: float = 0.95,
+    seed: int = 0,
+    block_length: int = 20,
+) -> tuple[float, float]:
+    """Circular block bootstrap 置信区间,用于保留收益序列的时间依赖结构。
+
+    日收益通常存在自相关和波动率聚集；若用 IID bootstrap 打散顺序,Sharpe/均值统计量的
+    CI 往往过窄。这里用固定长度 circular block bootstrap：随机抽取连续块,到序列末尾
+    时从开头环绕。``block_length`` 是显式研究参数,建议从 10--20 天起步并在报告中记录。
+    """
+    clean = _clean_returns(values)
+    if clean.empty:
+        return (float("nan"), float("nan"))
+    _validate_bootstrap_args(n_bootstrap, ci)
+    if block_length <= 0:
+        raise ValueError("block_length 必须为正")
+
+    rng = np.random.default_rng(seed)
+    stats = np.empty(n_bootstrap, dtype=float)
+    arr = clean.to_numpy()
+    for i in range(n_bootstrap):
+        sample = pd.Series(_circular_block_sample(arr, rng, block_length))
         stats[i] = statistic(sample)
     alpha = (1.0 - ci) / 2.0
     return (float(np.nanquantile(stats, alpha)), float(np.nanquantile(stats, 1.0 - alpha)))
@@ -132,8 +183,9 @@ def performance_summary(
     periods_per_year: int = TRADING_DAYS_CRYPTO,
     n_bootstrap: int = 1000,
     seed: int = 0,
+    bootstrap_block_length: int = 20,
 ) -> dict[str, float]:
-    """组合绩效摘要。CI 使用 bootstrap，不只报告裸点估计。"""
+    """组合绩效摘要。Sharpe CI 使用 circular block bootstrap，不只报告裸点估计。"""
     summary = {
         "annualized_return": annualized_return(returns, periods_per_year),
         "annualized_volatility": annualized_volatility(returns, periods_per_year),
@@ -148,9 +200,11 @@ def performance_summary(
         lambda x: sharpe_ratio(x, periods_per_year),
         n_bootstrap=n_bootstrap,
         seed=seed,
+        block_length=bootstrap_block_length,
     )
     summary["sharpe_ci_low"] = lo
     summary["sharpe_ci_high"] = hi
+    summary["bootstrap_block_length"] = float(bootstrap_block_length)
     if turnover is not None:
         summary["avg_turnover"] = float(_clean_returns(turnover).mean())
     if benchmark_returns is not None:
