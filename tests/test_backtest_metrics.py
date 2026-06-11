@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from backtest.metrics import (
     bootstrap_ci,
     calmar_ratio,
+    iid_bootstrap_ci,
     max_drawdown,
     performance_summary,
     realized_beta,
@@ -38,6 +40,29 @@ def test_bootstrap_ci_is_reproducible():
     assert ci1[0] <= ci1[1]
 
 
+def test_block_bootstrap_ci_wider_than_iid_for_autocorrelated_returns():
+    """AR(1) 正收益序列有时间依赖；block CI 应显著宽于 IID CI。"""
+    rng = np.random.default_rng(123)
+    n = 900
+    mean = 0.001
+    phi = 0.80
+    eps = rng.normal(0.0, 0.01, size=n)
+    values = np.empty(n)
+    values[0] = mean + eps[0]
+    for i in range(1, n):
+        values[i] = mean + phi * (values[i - 1] - mean) + eps[i]
+    returns = pd.Series(values)
+
+    def statistic(x: pd.Series) -> float:
+        return float(x.mean())
+
+    iid = iid_bootstrap_ci(returns, statistic, n_bootstrap=800, seed=4)
+    block = bootstrap_ci(returns, statistic, n_bootstrap=800, seed=4, block_length=20)
+    iid_width = iid[1] - iid[0]
+    block_width = block[1] - block[0]
+    assert block_width > iid_width * 1.5
+
+
 def test_realized_beta():
     strategy = pd.Series([0.01, 0.02, -0.01, 0.00])
     benchmark = pd.Series([0.02, 0.04, -0.02, 0.00])
@@ -56,5 +81,12 @@ def test_performance_summary_includes_ci_turnover_beta():
         n_bootstrap=100,
         seed=1,
     )
-    for key in ["sharpe_ci_low", "sharpe_ci_high", "avg_turnover", "realized_beta"]:
+    for key in [
+        "sharpe_ci_low",
+        "sharpe_ci_high",
+        "bootstrap_block_length",
+        "avg_turnover",
+        "realized_beta",
+    ]:
         assert key in summary
+    assert summary["bootstrap_block_length"] == pytest.approx(20.0)

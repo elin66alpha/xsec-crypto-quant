@@ -39,8 +39,9 @@ def test_parameter_sensitivity_and_selection():
 
 def test_bootstrap_and_dsr_report():
     returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.00, 0.01])
-    boot = monte_carlo_bootstrap(returns, n_bootstrap=100, seed=2)
+    boot = monte_carlo_bootstrap(returns, n_bootstrap=100, seed=2, block_length=10)
     assert boot["ci_low"] <= boot["ci_high"]
+    assert boot["block_length"] == pytest.approx(10.0)
     dsr = deflated_sharpe_report(returns, parameter_grid={"a": [1, 2], "b": [3, 4]})
     assert dsr.n_trials == 4
 
