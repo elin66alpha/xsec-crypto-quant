@@ -85,3 +85,55 @@ def test_regime_deleverage_is_applied_after_band():
     # signal day1 的危机权重在 execution day2 生效，总 gross 从 2x 降到 0.4x。
     assert result.banded_weights.abs().sum(axis=1).iloc[1] == pytest.approx(0.4)
     assert result.execution_weights.abs().sum(axis=1).iloc[2] == pytest.approx(0.4)
+
+
+def test_missing_returns_are_reported_and_force_closed_next_bar():
+    dates = _dates(5)
+    cols = ["A", "B", "C", "D"]
+    score = pd.DataFrame([[4, 3, 2, 1]] * 5, index=dates, columns=cols, dtype=float)
+    prices = pd.DataFrame(
+        {
+            "A": [100.0, 110.0, None, 121.0, 133.1],  # day1 持仓后下一 open 缺失
+            "B": [100.0, 100.0, 100.0, 100.0, 100.0],
+            "C": [100.0, 100.0, 100.0, 100.0, 100.0],
+            "D": [100.0, 90.0, 81.0, 72.9, 65.61],
+        },
+        index=dates,
+    )
+
+    with pytest.warns(RuntimeWarning, match="缺失 open-to-open 收益"):
+        result = run_backtest(
+            score,
+            prices,
+            config=BacktestConfig(
+                quantile=0.25, no_trade_band=0.0, taker_fee=0.0, slippage=0.0
+            ),
+        )
+
+    assert result.missing_return_exposure.iloc[1] == pytest.approx(1.0)
+    assert result.execution_weights["A"].iloc[1] == pytest.approx(1.0)
+    assert result.execution_weights["A"].iloc[2] == pytest.approx(0.0)
+    # A 用最后有效价格标记为 0% 收益；D 空头继续从 -10% 中获利。
+    assert result.gross_return.iloc[1] == pytest.approx(0.10)
+    assert "missing_return_exposure" in result.to_frame().columns
+
+
+def test_terminal_missing_forward_return_is_not_flagged():
+    dates = _dates(3)
+    cols = ["A", "B", "C", "D"]
+    score = pd.DataFrame([[4, 3, 2, 1]] * 3, index=dates, columns=cols, dtype=float)
+    prices = pd.DataFrame(
+        {
+            "A": [100.0, 110.0, 121.0],
+            "B": [100.0, 100.0, 100.0],
+            "C": [100.0, 100.0, 100.0],
+            "D": [100.0, 90.0, 81.0],
+        },
+        index=dates,
+    )
+    result = run_backtest(
+        score,
+        prices,
+        config=BacktestConfig(quantile=0.25, no_trade_band=0.0, taker_fee=0.0, slippage=0.0),
+    )
+    assert result.missing_return_exposure.sum() == pytest.approx(0.0)
