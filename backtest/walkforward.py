@@ -13,13 +13,17 @@ class HoldoutLockedError(RuntimeError):
 
 @dataclass(frozen=True)
 class SplitConfig:
-    """默认三段切分：2020-2022 / 2023 / 最近 6-12 个月 holdout 可由调用方传入。"""
+    """三段切分（2026-06-11 定界，见 docs/review_findings_2026-06-11.md #6）。
+
+    holdout_start 固定不再移动；解锁时以当日为 holdout_end 一次性冻结，
+    保证 holdout 落在"最近 6-12 个月"且全周期只看一次。
+    """
 
     in_sample_start: str = "2020-01-01"
-    in_sample_end: str = "2022-12-31"
-    validation_start: str = "2023-01-01"
-    validation_end: str = "2023-12-31"
-    holdout_start: str = "2024-01-01"
+    in_sample_end: str = "2024-06-30"
+    validation_start: str = "2024-07-01"
+    validation_end: str = "2025-09-30"
+    holdout_start: str = "2025-10-01"
     holdout_end: str | None = None
 
 

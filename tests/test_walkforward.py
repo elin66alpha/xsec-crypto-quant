@@ -15,10 +15,12 @@ from backtest.walkforward import (
 
 
 def test_three_way_split_locks_holdout_by_default():
-    idx = pd.date_range("2020-01-01", "2024-03-31", freq="D", tz="UTC")
+    idx = pd.date_range("2020-01-01", "2026-06-10", freq="D", tz="UTC")
     split = split_three_way(idx)
     assert split.in_sample.min() == pd.Timestamp("2020-01-01", tz="UTC")
-    assert split.validation.min() == pd.Timestamp("2023-01-01", tz="UTC")
+    assert split.in_sample.max() == pd.Timestamp("2024-06-30", tz="UTC")
+    assert split.validation.min() == pd.Timestamp("2024-07-01", tz="UTC")
+    assert split.validation.max() == pd.Timestamp("2025-09-30", tz="UTC")
     assert split.holdout is None
 
 
