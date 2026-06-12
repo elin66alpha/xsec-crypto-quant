@@ -28,6 +28,7 @@ class BacktestConfig:
     """回测参数；Phase 5 walk-forward 负责最终选择这些参数。"""
 
     quantile: float = DEFAULT_QUANTILE
+    exit_quantile: float | None = None
     no_trade_band: float = DEFAULT_NO_TRADE_BAND
     taker_fee: float = 0.0005
     slippage: float = 0.0005
@@ -152,7 +153,11 @@ def run_backtest(
             missing_return_exposure=empty_series,
         )
 
-    target = build_target_weights(score, quantile=config.quantile)
+    target = build_target_weights(
+        score,
+        quantile=config.quantile,
+        exit_quantile=config.exit_quantile,
+    )
     banded = apply_no_trade_band(target, band=config.no_trade_band)
     risk_adjusted = apply_regime_leverage(banded, regime=regime, corr_spike=corr_spike)
     execution = to_execution(risk_adjusted).fillna(0.0)

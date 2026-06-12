@@ -38,8 +38,74 @@ def _row_weights(score_row: pd.Series, quantile: float) -> pd.Series:
     return out
 
 
-def build_target_weights(score: pd.DataFrame, quantile: float = DEFAULT_QUANTILE) -> pd.DataFrame:
+def _n_side(n_assets: int, quantile: float) -> int:
+    """给定有效标的数和分位宽度,返回单侧入选/保留数量。"""
+    n_side = max(1, int(np.floor(n_assets * quantile)))
+    return min(n_side, n_assets // 2)
+
+
+def _hysteresis_weights(
+    score: pd.DataFrame,
+    quantile: float,
+    exit_quantile: float,
+) -> pd.DataFrame:
+    """逐日排名缓冲带：入选看 quantile,已持仓跌出 exit_quantile 才剔除。"""
+    held_longs: set[str] = set()
+    held_shorts: set[str] = set()
+    rows: dict[pd.Timestamp, pd.Series] = {}
+
+    for ts in score.index:
+        score_row = score.loc[ts]
+        valid = score_row.dropna()
+        out = pd.Series(0.0, index=score.columns)
+        if len(valid) < 2:
+            held_longs = set()
+            held_shorts = set()
+            rows[ts] = out
+            continue
+
+        entry_n = _n_side(len(valid), quantile)
+        exit_n = _n_side(len(valid), exit_quantile)
+        ordered = valid.sort_values(ascending=False)
+
+        entry_longs = set(ordered.index[:entry_n])
+        entry_shorts = set(ordered.index[-entry_n:])
+        exit_longs = set(ordered.index[:exit_n])
+        exit_shorts = set(ordered.index[-exit_n:])
+
+        longs = (held_longs & exit_longs) | entry_longs
+        shorts = (held_shorts & exit_shorts) | entry_shorts
+
+        # 若排名穿越到对侧入选区,直接换侧；同一标的不得同时属于两腿。
+        longs -= entry_shorts
+        shorts -= entry_longs
+        overlap = longs & shorts
+        if overlap:
+            longs -= overlap
+            shorts -= overlap
+
+        if longs:
+            out[list(longs)] = 1.0 / len(longs)
+        if shorts:
+            out[list(shorts)] = -1.0 / len(shorts)
+
+        held_longs = longs
+        held_shorts = shorts
+        rows[ts] = out
+
+    return pd.DataFrame(rows).T.reindex(columns=score.columns)
+
+
+def build_target_weights(
+    score: pd.DataFrame,
+    quantile: float = DEFAULT_QUANTILE,
+    exit_quantile: float | None = None,
+) -> pd.DataFrame:
     """逐日构建美元中性、分层等权的目标权重（基础合计名义 2x）。
+
+    ``exit_quantile`` 为 ``None`` 时保持旧行为：每日只持有 top/bottom ``quantile``。
+    传入 ``exit_quantile >= quantile`` 时启用排名缓冲带：新标的必须进入入选档才开仓,
+    已持有标的只要仍在更宽的退出档内就保留,以减少分位边界来回横跳带来的换手。
 
     Returns
     -------
@@ -48,8 +114,15 @@ def build_target_weights(score: pd.DataFrame, quantile: float = DEFAULT_QUANTILE
     """
     if not 0 < quantile <= 0.5:
         raise ValueError(f"quantile 必须在 (0, 0.5],收到 {quantile}")
+    if exit_quantile is not None and not quantile <= exit_quantile <= 0.5:
+        raise ValueError(
+            "exit_quantile 必须满足 quantile <= exit_quantile <= 0.5,"
+            f"收到 quantile={quantile}, exit_quantile={exit_quantile}"
+        )
     if score.empty:
         return score.copy()
+    if exit_quantile is not None:
+        return _hysteresis_weights(score, quantile, exit_quantile)
     rows = {ts: _row_weights(score.loc[ts], quantile) for ts in score.index}
     return pd.DataFrame(rows).T.reindex(columns=score.columns)
 
