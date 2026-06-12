@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xsec-crypto-quant"
+version = "2.0.0"
+description = "横截面加密货币多空量化研究项目（日频，多空中性，永续合约）"
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Proprietary" }
+
+# 注意：vnpy 全套依赖单独从 pip 分别安装，不在此处整包声明（见 CLAUDE.md）。
+# ta-lib 需先装系统 C 库（macOS: brew install ta-lib；Linux: 从源码编译）。
+dependencies = [
+    # --- 数据层 ---
+    "ccxt>=4.0.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pyarrow",
+    "aiohttp",
+    "websockets",
+    "requests",
+
+    # --- 特征 / 因子 ---
+    "pandas-ta",
+    "numba",
+
+    # --- 统计与因子分析 ---
+    "statsmodels",
+    "scipy",
+    "scikit-learn",
+    "alphalens-reloaded",
+
+    # --- Regime 分析 ---
+    "hmmlearn",
+    "ruptures",
+    "arch",
+
+    # --- 回测（vectorbt 为备选/对照，横截面组合可能自写回测器）---
+    "vectorbt>=0.26.0",
+
+    # --- 工具 ---
+    "loguru",
+    "pydantic>=2.0",
+    "jupyter",
+    "plotly",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+# vnpy 全套（阶段 6 再装；各子模块分别安装，不要 pip install vnpy 整包）
+live = [
+    "vnpy_core",
+    "vnpy_binance",
+    "vnpy_ctastrategy",
+    "vnpy_paperaccount",
+    "vnpy_datamanager",
+]
+
+[tool.setuptools.packages.find]
+include = ["data*", "features*", "factors*", "regime*", "strategy*", "backtest*", "live*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]  # 行长由 line-length 控制，docstring 内长公式不强制
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true  # ccxt/vnpy/alphalens 等无完整 stub

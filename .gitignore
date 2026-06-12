@@ -1,0 +1,77 @@
+# ===== 密钥与配置（绝不入库）=====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# ===== 市场数据（体积大且可重新拉取，绝不入库）=====
+data/*.parquet
+data/**/*.parquet
+data/raw/
+data/cache/
+data/snapshots/
+*.csv
+!tests/**/*.csv          # 测试用小样本 csv 允许入库
+
+# ===== 模型与研究产物 =====
+models/
+*.pkl
+*.joblib
+*.h5
+artifacts/
+reports/*.html
+!reports/.gitkeep
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+ENV/
+# conda 环境一般在 conda 目录，不在项目内，但以防万一：
+.conda/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+profile_default/
+ipython_config.py
+
+# ===== 测试与覆盖率 =====
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.cache/
+
+# ===== 日志 =====
+*.log
+logs/
+
+# ===== IDE / OS =====
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== 类型检查 / lint 缓存 =====
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
