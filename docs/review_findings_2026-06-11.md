@@ -20,8 +20,8 @@
   3. 保守近似：把 N 除以 horizon 再算 t。
 - **验收**：单测构造一个已知自相关的 IC 序列，确认修正后 t 值显著低于裸 `ICIR×√N`；horizon=1 时与原结果一致。
 
-### 2. `[~]` 幸存者偏差在实现上仍未解决（基础设施已落地，日历覆盖面返工中）
-> 2026-06-12 进展：探测确认 OKX 不提供已退市合约历史（FTT/SRM/ANC 返回 51001 零数据）→ 走预案 2 混合口径。已合并：资产代际主键（LUNA 新旧两代分离）、metadata/okx_perp_calendar.json、Binance Vision 降级拉取、validate 退市覆盖检查。**未完成**：日历退市条目仅覆盖探测的 4 币 + 1 公告，需全量枚举 Binance Vision UM 归档目录反推完整退市集合（返工任务已派 codex-w1）。
+### 2. `[x]` 幸存者偏差在实现上仍未解决（已闭环，commit 83bc2e2）
+> 2026-06-12 完成：探测确认 OKX 不提供已退市合约历史（FTT/SRM/ANC 返回 51001 零数据）→ 走预案 2 混合口径（退市合约 K 线用 data.binance.vision，其余统一 OKX，有界偏差已在审计文档与日历 schema notes 披露）。落地内容：资产代际主键（新旧 LUNA 分离）、全量日历 metadata/okx_perp_calendar.json（804 条目、449 个退市代际，S3 归档枚举反推上市/退市日）、Binance Vision 降级拉取、validate 退市覆盖闸门（2021-06/2022-06 时点现已退市可交易数 56/69 ≥ 阈值 10）。实现：codex-w1 起步、claude-lead 在其额度耗尽后收尾。
 
 - **位置**：`data/universe.py`（`list_perpetual_symbols` 只返回现存合约；`infer_listing_dates` 用首条数据日做上市日代理）。代码注释"说明②"已诚实标注，但未解决。
 - **问题**：LUNA、FTT 等退市币根本不在候选集里。2021–2022 回测池缺了恰恰最该被做空的那批币，多空两腿的损益都被系统性扭曲，方向不可知。这直接违反决策 1 铁律。
