@@ -103,7 +103,7 @@
 - **位置**：`strategy/rebalance.py`（`apply_no_trade_band` 的 `held` 状态）。
 - **说明**：实际上价格变动会让权重漂移；日频下是二阶小量。先记录在案，待缓冲带（问题 5）落地后评估是否还需要建模漂移。
 
-### 12. 美元中性的实际 beta 需分 regime 监测
+### 12. `[x]` 美元中性的实际 beta 需分 regime 监测（commit feat(backtest): report realized beta per regime，codex-w2 实现）
 
 - **位置**：`backtest/metrics.py`（`realized_beta` 已有全样本版本）。
 - **说明**：横截面动量在加密里常系统性做空高 beta 山寨 → 持续负 beta 倾向，且危机时最伤。建议报告里按 regime 分段报 beta，而不只报全样本一个数。决策 7 本来就预留了"实测 beta 显著偏 0 再切 beta 中性"。

@@ -99,6 +99,30 @@ def realized_beta(strategy_returns: pd.Series, benchmark_returns: pd.Series) -> 
     return float(aligned.iloc[:, 0].cov(x) / var)
 
 
+def realized_beta_by_regime(
+    strategy_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    regime: pd.Series,
+) -> dict[int, float]:
+    """Compute realized beta separately within each non-missing regime label."""
+    aligned = pd.concat(
+        {
+            "strategy": strategy_returns,
+            "benchmark": benchmark_returns,
+            "regime": regime,
+        },
+        axis=1,
+        join="inner",
+    ).dropna()
+    if aligned.empty:
+        return {}
+
+    betas: dict[int, float] = {}
+    for regime_value, group in aligned.groupby("regime"):
+        betas[int(regime_value)] = realized_beta(group["strategy"], group["benchmark"])
+    return betas
+
+
 def _validate_bootstrap_args(n_bootstrap: int, ci: float) -> None:
     if n_bootstrap <= 0:
         raise ValueError("n_bootstrap 必须为正")
@@ -180,6 +204,7 @@ def performance_summary(
     returns: pd.Series,
     turnover: pd.Series | None = None,
     benchmark_returns: pd.Series | None = None,
+    regime: pd.Series | None = None,
     periods_per_year: int = TRADING_DAYS_CRYPTO,
     n_bootstrap: int = 1000,
     seed: int = 0,
@@ -209,6 +234,11 @@ def performance_summary(
         summary["avg_turnover"] = float(_clean_returns(turnover).mean())
     if benchmark_returns is not None:
         summary["realized_beta"] = realized_beta(returns, benchmark_returns)
+        if regime is not None:
+            for regime_value, beta in realized_beta_by_regime(
+                returns, benchmark_returns, regime
+            ).items():
+                summary[f"beta_regime_{regime_value}"] = beta
     return summary
 
 
