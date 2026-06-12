@@ -116,9 +116,9 @@ def test_universe_consistency_detects_lookahead():
 
 
 def test_universe_consistency_detects_post_delisting_members():
-    listing = pd.Series({"FTT": pd.Timestamp("2021-09-01", tz="UTC")})
-    delisting = pd.Series({"FTT": pd.Timestamp("2022-11-14", tz="UTC")})
-    hist = {pd.Timestamp("2022-12-01", tz="UTC"): ["FTT"]}
+    listing = pd.Series({"FTT-20220501": pd.Timestamp("2022-05-01", tz="UTC")})
+    delisting = pd.Series({"FTT-20220501": pd.Timestamp("2022-11-14", tz="UTC")})
+    hist = {pd.Timestamp("2022-12-01", tz="UTC"): ["FTT-20220501"]}
 
     rep = check_universe_consistency(
         hist,
@@ -139,7 +139,7 @@ def test_required_historical_members_detects_missing_delisted_representatives():
 
     rep = check_required_historical_members(
         hist,
-        {"FTT", "SRM", "ANC"},
+        {"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
         start=pd.Timestamp("2021-01-01", tz="UTC"),
         end=pd.Timestamp("2022-12-01", tz="UTC"),
     )
@@ -151,12 +151,12 @@ def test_required_historical_members_detects_missing_delisted_representatives():
 def test_required_historical_members_passes_when_delisted_representative_present():
     hist = {
         pd.Timestamp("2021-01-01", tz="UTC"): ["BTC", "ETH"],
-        pd.Timestamp("2022-01-01", tz="UTC"): ["BTC", "FTT"],
+        pd.Timestamp("2022-01-01", tz="UTC"): ["BTC", "FTT-20220501"],
     }
 
     rep = check_required_historical_members(
         hist,
-        {"FTT", "SRM", "ANC"},
+        {"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
         start=pd.Timestamp("2021-01-01", tz="UTC"),
         end=pd.Timestamp("2022-12-01", tz="UTC"),
     )
@@ -178,7 +178,7 @@ def test_universe_consistency_runs_required_historical_member_check():
         hist,
         listing,
         min_listing_days=0,
-        required_presence_symbols={"FTT", "SRM", "ANC"},
+        required_presence_symbols={"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
         required_presence_start=pd.Timestamp("2021-01-01", tz="UTC"),
         required_presence_end=pd.Timestamp("2022-12-01", tz="UTC"),
     )

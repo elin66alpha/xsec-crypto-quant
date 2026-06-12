@@ -86,19 +86,47 @@ def load_perp_calendar(path: str | Path = DEFAULT_PERP_CALENDAR_PATH) -> pd.Data
 
     calendar["listing_date"] = pd.to_datetime(calendar["listing_date"], utc=True, errors="coerce")
     calendar["delisting_date"] = pd.to_datetime(calendar["delisting_date"], utc=True, errors="coerce")
-    calendar = calendar.drop_duplicates(subset=["symbol"], keep="last").set_index("symbol").sort_index()
+    if "asset_id" not in calendar.columns:
+        calendar["asset_id"] = calendar.apply(_asset_id_from_calendar_row, axis=1)
+    if calendar["asset_id"].duplicated().any():
+        duplicates = sorted(calendar.loc[calendar["asset_id"].duplicated(), "asset_id"].unique())
+        raise ValueError(f"永续合约日历 asset_id 重复: {duplicates}")
+    calendar = calendar.set_index("asset_id").sort_index()
     return calendar
 
 
+def _asset_id_from_calendar_row(row: pd.Series) -> str:
+    base = row.get("base")
+    if pd.isna(base) or base is None:
+        base = str(row["symbol"]).split("/", maxsplit=1)[0]
+    listing = row.get("listing_date")
+    suffix = "unknown" if pd.isna(listing) else pd.Timestamp(listing).strftime("%Y%m%d")
+    return f"{base}-{suffix}"
+
+
+def _calendar_row_for_key(calendar: pd.DataFrame, key: str) -> tuple[str, pd.Series]:
+    """按 asset_id 取日历；裸 symbol 仅在唯一匹配时允许。"""
+    if key in calendar.index:
+        return key, calendar.loc[key]
+    matches = calendar[calendar["symbol"] == key]
+    if len(matches) == 1:
+        asset_key = str(matches.index[0])
+        return asset_key, matches.iloc[0]
+    if len(matches) > 1:
+        asset_ids = sorted(str(idx) for idx in matches.index)
+        raise ValueError(f"{key} 对应多个 asset_id {asset_ids}，必须传入唯一 asset_id")
+    raise KeyError(key)
+
+
 def calendar_listing_dates(calendar: pd.DataFrame) -> pd.Series:
-    """从合约日历提取上市日期 Series。"""
+    """从合约日历提取上市日期 Series，index 为唯一 asset_id。"""
     if "listing_date" not in calendar.columns:
         raise ValueError("永续合约日历缺少 listing_date 字段")
     return calendar["listing_date"].dropna()
 
 
 def calendar_delisting_dates(calendar: pd.DataFrame) -> pd.Series:
-    """从合约日历提取退市日期 Series。"""
+    """从合约日历提取退市日期 Series，index 为唯一 asset_id。"""
     if "delisting_date" not in calendar.columns:
         raise ValueError("永续合约日历缺少 delisting_date 字段")
     return calendar["delisting_date"].dropna()
@@ -278,6 +306,7 @@ def load_dollar_volume_panel(
 
     复用 ``data/fetcher.py`` 的分页拉取（OKX 单次最多 100 根，必须分页）。
     若传入合约日历，则按 ``data_source`` 对已退市合约走 Binance Vision fallback。
+    此时输出列使用唯一 ``asset_id``，而不是可能复用的交易所 symbol。
     dollar_volume ≈ close × base_volume（审计说明①）。
     """
     from .fetcher import fetch_ohlcv  # 局部导入，避免纯逻辑路径牵入 fetcher
@@ -289,27 +318,31 @@ def load_dollar_volume_panel(
             exchange = _make_okx_perp(exchange)
             symbols = list_perpetual_symbols(exchange)
 
-    source_map: dict[str, tuple[str, str | None]] = {}
-    for symbol in symbols:
+    source_map: dict[str, tuple[str, str, str, str | None]] = {}
+    for requested_symbol in symbols:
+        output_symbol = requested_symbol
+        fetch_symbol = requested_symbol
         source = "okx"
         binance_symbol = None
-        if calendar is not None and symbol in calendar.index:
-            source_value = calendar.loc[symbol].get("data_source", "okx")
+        if calendar is not None:
+            output_symbol, row = _calendar_row_for_key(calendar, requested_symbol)
+            fetch_symbol = str(row.get("symbol", requested_symbol))
+            source_value = row.get("data_source", "okx")
             source = "okx" if pd.isna(source_value) else str(source_value)
-            binance_value = calendar.loc[symbol].get("binance_symbol")
+            binance_value = row.get("binance_symbol")
             if pd.notna(binance_value):
                 binance_symbol = str(binance_value)
-        source_map[symbol] = (source, binance_symbol)
+        source_map[requested_symbol] = (output_symbol, fetch_symbol, source, binance_symbol)
 
-    if any(source == "okx" for source, _ in source_map.values()):
+    if any(source == "okx" for _, _, source, _ in source_map.values()):
         exchange = _make_okx_perp(exchange)
 
     series_map: dict[str, pd.Series] = {}
-    for symbol in symbols:
-        source, binance_symbol = source_map[symbol]
+    for requested_symbol in symbols:
+        output_symbol, fetch_symbol, source, binance_symbol = source_map[requested_symbol]
         try:
             df = fetch_ohlcv(
-                symbol,
+                fetch_symbol,
                 timeframe="1d",
                 since=since,
                 until=until,
@@ -319,12 +352,12 @@ def load_dollar_volume_panel(
                 session=fetch_session,
             )
         except Exception as exc:  # noqa: BLE001 — 单标的失败不应中断整体
-            logger.warning("拉取 {} 失败：{}", symbol, exc)
+            logger.warning("拉取 {} 失败：{}", requested_symbol, exc)
             continue
         if df.empty:
             continue
         idx = df.index.normalize()
-        series_map[symbol] = pd.Series((df["close"] * df["volume"]).values, index=idx)
+        series_map[output_symbol] = pd.Series((df["close"] * df["volume"]).values, index=idx)
 
     if not series_map:
         return pd.DataFrame()

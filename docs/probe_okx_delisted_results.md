@@ -84,8 +84,19 @@ https://data.binance.vision/data/futures/um/daily/klines/{SYMBOL}/1d/{SYMBOL}-1d
 | `SRM-USDT-SWAP` | `SRMUSDT` | 2022-11-01, 2022-10-01, 2022-09-01 | all three | K 线归档存在 |
 | `ANC-USDT-SWAP` | `ANCUSDT` | 2022-05-01, 2022-04-01, 2022-03-01 | 2022-05-01, 2022-04-01 | 2022-03-01 返回 404，但后续月份归档存在 |
 
+补充检查（2026-06-12）：为避免 LUNA 符号复用，把 Binance 归档也按代际核验：
+
+| Binance symbol/date | HTTP | 解释 |
+|---|---:|---|
+| `LUNAUSDT` / 2022-05-01 | 200 | 旧 LUNA 崩盘期归档存在 |
+| `LUNAUSDT` / 2022-06-01 | 404 | 未发现同一 Binance symbol 延续到新 LUNA 段 |
+| `LUNA2USDT` / 2022-06-01 | 404 | 未发现该日期的新 LUNA2 USDT-M 日线归档 |
+
+实现要求：日历和动态池必须用唯一 `asset_id`（如 `LUNA-20190726` 与 `LUNA-20220528`）
+区分代际；裸交易所 symbol 只能作为取数参数，严禁把同名不同资产拼接成一条价格序列。
+
 ## 原始探测要点
 
 - OKX 对不存在旧 instId 的行为不是 HTTP 404，而是 HTTP 200 + OKX code `51001` + 空 `data`。
-- `LUNA-USDT-SWAP` 不能作为“OKX 可取退市旧合约历史”的正例：当前 instruments 中仍存在该 instId，且 OKX 日线最早只到 2022-05-28。
+- `LUNA-USDT-SWAP` 不能作为“OKX 可取退市旧合约历史”的正例：当前 instruments 中仍存在该 instId，且 OKX 日线最早只到 2022-05-28；这是新 LUNA 代际，不能与 2022-05 崩盘前旧 LUNA 串接。
 - Binance archive HEAD 只证明日 K zip 文件存在，不代表 Binance/OKX 口径一致；若采用该降级方案，回测报告必须披露混合口径只用于 OKX 已退市且 OKX REST 无法回拉的标的。

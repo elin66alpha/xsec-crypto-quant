@@ -1,15 +1,17 @@
 """Build a reproducible USDT perpetual contract calendar.
 
 The OKX public instruments endpoint only lists currently known instruments. Per
-the delisted-contract probe, removed contracts such as FTT/SRM/ANC are not
+the delisted-contract probe, removed contracts such as old LUNA/FTT/SRM/ANC are not
 queryable by old OKX instId. This script therefore combines:
 
 1. current OKX USDT swap instruments from public REST; and
-2. a small curated set of delisted symbols whose OHLCV fallback is Binance
+2. a small curated set of delisted asset generations whose OHLCV fallback is Binance
    data.binance.vision.
 
 The output is intentionally small JSON metadata committed to git, not market
-data. It is used to make universe construction timestamp-aware.
+data. It is used to make universe construction timestamp-aware. Calendar rows
+use asset_id, not symbol, as the unique key because symbols such as LUNA can be
+reused for different asset generations.
 """
 
 from __future__ import annotations
@@ -29,6 +31,21 @@ DEFAULT_OUTPUT = Path("metadata/okx_perp_calendar.json")
 # OHLCV for these symbols is fetched from Binance Vision because OKX no longer
 # recognizes these old instIds according to docs/probe_okx_delisted_results.md.
 KNOWN_DELISTED_FALLBACKS: tuple[dict[str, Any], ...] = (
+    {
+        "inst_id": "LUNA-USDT-SWAP",
+        "symbol": "LUNA/USDT:USDT",
+        "base": "LUNA",
+        "quote": "USDT",
+        "settle": "USDT",
+        "listing_date": "2019-07-26",
+        "delisting_date": "2022-05-13",
+        "data_source": "binance_vision",
+        "binance_symbol": "LUNAUSDT",
+        "notes": (
+            "Old LUNA generation from Binance Vision; do not concatenate with OKX "
+            "current LUNA listed 2022-05-28."
+        ),
+    },
     {
         "inst_id": "FTT-USDT-SWAP",
         "symbol": "FTT/USDT:USDT",
@@ -81,13 +98,25 @@ def inst_id_to_symbol(inst_id: str) -> str:
     return f"{base}/USDT:USDT"
 
 
+def asset_id(base: str, listing_date: str | None) -> str:
+    """Unique asset-generation key; symbols alone can be reused after redenomination."""
+    suffix = (listing_date or "unknown").replace("-", "")
+    return f"{base}-{suffix}"
+
+
+def with_asset_id(entry: dict[str, Any]) -> dict[str, Any]:
+    out = dict(entry)
+    out["asset_id"] = asset_id(str(out["base"]), out.get("listing_date"))
+    return out
+
+
 def normalize_okx_instrument(row: dict[str, Any]) -> dict[str, Any] | None:
     inst_id = row.get("instId", "")
     settle = row.get("settleCcy")
     if not inst_id.endswith("-USDT-SWAP") or settle != "USDT":
         return None
     base = inst_id.removesuffix("-USDT-SWAP")
-    return {
+    return with_asset_id({
         "inst_id": inst_id,
         "symbol": inst_id_to_symbol(inst_id),
         "base": base,
@@ -98,7 +127,7 @@ def normalize_okx_instrument(row: dict[str, Any]) -> dict[str, Any] | None:
         "data_source": "okx",
         "binance_symbol": None,
         "notes": "current OKX public instruments snapshot",
-    }
+    })
 
 
 def fetch_current_okx_usdt_swaps(timeout: float = 20.0) -> list[dict[str, Any]]:
@@ -117,16 +146,18 @@ def fetch_current_okx_usdt_swaps(timeout: float = 20.0) -> list[dict[str, Any]]:
 
 def build_calendar(timeout: float = 20.0) -> dict[str, Any]:
     current = fetch_current_okx_usdt_swaps(timeout=timeout)
-    by_symbol = {entry["symbol"]: entry for entry in current}
+    by_asset = {entry["asset_id"]: entry for entry in current}
     for fallback in KNOWN_DELISTED_FALLBACKS:
-        by_symbol.setdefault(fallback["symbol"], dict(fallback))
-    entries = sorted(by_symbol.values(), key=lambda x: x["symbol"])
+        entry = with_asset_id(fallback)
+        by_asset.setdefault(entry["asset_id"], entry)
+    entries = sorted(by_asset.values(), key=lambda x: (x["symbol"], x["asset_id"]))
     return {
         "generated_at": datetime.now(tz=UTC).isoformat(),
-        "schema_version": 1,
+        "schema_version": 2,
         "notes": (
-            "Current OKX instruments plus curated Binance Vision fallback entries for "
-            "OKX-unavailable delisted contracts. See docs/probe_okx_delisted_results.md."
+            "Current OKX instruments plus curated Binance Vision fallback asset generations "
+            "for OKX-unavailable delisted contracts. asset_id is the stable universe key; "
+            "symbol is only the exchange fetch symbol. See docs/probe_okx_delisted_results.md."
         ),
         "contracts": entries,
     }

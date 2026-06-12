@@ -1,6 +1,7 @@
 {
   "contracts": [
     {
+      "asset_id": "0G-20250922",
       "base": "0G",
       "binance_symbol": null,
       "data_source": "okx",
@@ -13,6 +14,7 @@
       "symbol": "0G/USDT:USDT"
     },
     {
+      "asset_id": "1INCH-20201225",
       "base": "1INCH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -25,6 +27,7 @@
       "symbol": "1INCH/USDT:USDT"
     },
     {
+      "asset_id": "2Z-20251002",
       "base": "2Z",
       "binance_symbol": null,
       "data_source": "okx",
@@ -37,6 +40,7 @@
       "symbol": "2Z/USDT:USDT"
     },
     {
+      "asset_id": "A-20250529",
       "base": "A",
       "binance_symbol": null,
       "data_source": "okx",
@@ -49,6 +53,7 @@
       "symbol": "A/USDT:USDT"
     },
     {
+      "asset_id": "AAOI-20260526",
       "base": "AAOI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -61,6 +66,7 @@
       "symbol": "AAOI/USDT:USDT"
     },
     {
+      "asset_id": "AAPL-20260304",
       "base": "AAPL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -73,6 +79,7 @@
       "symbol": "AAPL/USDT:USDT"
     },
     {
+      "asset_id": "AAVE-20201210",
       "base": "AAVE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -85,6 +92,7 @@
       "symbol": "AAVE/USDT:USDT"
     },
     {
+      "asset_id": "ACH-20240222",
       "base": "ACH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -97,6 +105,7 @@
       "symbol": "ACH/USDT:USDT"
     },
     {
+      "asset_id": "ACT-20241114",
       "base": "ACT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -109,6 +118,7 @@
       "symbol": "ACT/USDT:USDT"
     },
     {
+      "asset_id": "ACU-20260123",
       "base": "ACU",
       "binance_symbol": null,
       "data_source": "okx",
@@ -121,6 +131,7 @@
       "symbol": "ACU/USDT:USDT"
     },
     {
+      "asset_id": "ADA-20200228",
       "base": "ADA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -133,6 +144,7 @@
       "symbol": "ADA/USDT:USDT"
     },
     {
+      "asset_id": "ADBE-20260603",
       "base": "ADBE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -145,6 +157,7 @@
       "symbol": "ADBE/USDT:USDT"
     },
     {
+      "asset_id": "AERO-20250703",
       "base": "AERO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -157,6 +170,7 @@
       "symbol": "AERO/USDT:USDT"
     },
     {
+      "asset_id": "AEVO-20240313",
       "base": "AEVO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -169,6 +183,7 @@
       "symbol": "AEVO/USDT:USDT"
     },
     {
+      "asset_id": "AGLD-20210907",
       "base": "AGLD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -181,6 +196,7 @@
       "symbol": "AGLD/USDT:USDT"
     },
     {
+      "asset_id": "AI-20260429",
       "base": "AI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -193,6 +209,7 @@
       "symbol": "AI/USDT:USDT"
     },
     {
+      "asset_id": "AIXBT-20250103",
       "base": "AIXBT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -205,6 +222,7 @@
       "symbol": "AIXBT/USDT:USDT"
     },
     {
+      "asset_id": "ALGO-20200421",
       "base": "ALGO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -217,6 +235,7 @@
       "symbol": "ALGO/USDT:USDT"
     },
     {
+      "asset_id": "ALLO-20251111",
       "base": "ALLO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -229,6 +248,7 @@
       "symbol": "ALLO/USDT:USDT"
     },
     {
+      "asset_id": "AMAT-20260528",
       "base": "AMAT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -241,6 +261,7 @@
       "symbol": "AMAT/USDT:USDT"
     },
     {
+      "asset_id": "AMD-20260311",
       "base": "AMD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -253,6 +274,7 @@
       "symbol": "AMD/USDT:USDT"
     },
     {
+      "asset_id": "AMZN-20260226",
       "base": "AMZN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -265,6 +287,7 @@
       "symbol": "AMZN/USDT:USDT"
     },
     {
+      "asset_id": "ANC-20220401",
       "base": "ANC",
       "binance_symbol": "ANCUSDT",
       "data_source": "binance_vision",
@@ -277,6 +300,7 @@
       "symbol": "ANC/USDT:USDT"
     },
     {
+      "asset_id": "ANIME-20250123",
       "base": "ANIME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -289,6 +313,7 @@
       "symbol": "ANIME/USDT:USDT"
     },
     {
+      "asset_id": "ANTHROPIC-20260507",
       "base": "ANTHROPIC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -301,6 +326,7 @@
       "symbol": "ANTHROPIC/USDT:USDT"
     },
     {
+      "asset_id": "APE-20220317",
       "base": "APE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -313,6 +339,7 @@
       "symbol": "APE/USDT:USDT"
     },
     {
+      "asset_id": "API3-20220303",
       "base": "API3",
       "binance_symbol": null,
       "data_source": "okx",
@@ -325,6 +352,7 @@
       "symbol": "API3/USDT:USDT"
     },
     {
+      "asset_id": "APR-20251024",
       "base": "APR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -337,6 +365,7 @@
       "symbol": "APR/USDT:USDT"
     },
     {
+      "asset_id": "APT-20221019",
       "base": "APT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -349,6 +378,7 @@
       "symbol": "APT/USDT:USDT"
     },
     {
+      "asset_id": "AR-20230214",
       "base": "AR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -361,6 +391,7 @@
       "symbol": "AR/USDT:USDT"
     },
     {
+      "asset_id": "ARB-20230323",
       "base": "ARB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -373,6 +404,7 @@
       "symbol": "ARB/USDT:USDT"
     },
     {
+      "asset_id": "ARKM-20241121",
       "base": "ARKM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -385,6 +417,7 @@
       "symbol": "ARKM/USDT:USDT"
     },
     {
+      "asset_id": "ARM-20260429",
       "base": "ARM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -397,6 +430,7 @@
       "symbol": "ARM/USDT:USDT"
     },
     {
+      "asset_id": "ASML-20260603",
       "base": "ASML",
       "binance_symbol": null,
       "data_source": "okx",
@@ -409,6 +443,7 @@
       "symbol": "ASML/USDT:USDT"
     },
     {
+      "asset_id": "ASTER-20250922",
       "base": "ASTER",
       "binance_symbol": null,
       "data_source": "okx",
@@ -421,6 +456,7 @@
       "symbol": "ASTER/USDT:USDT"
     },
     {
+      "asset_id": "ASTS-20260602",
       "base": "ASTS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -433,6 +469,7 @@
       "symbol": "ASTS/USDT:USDT"
     },
     {
+      "asset_id": "AT-20251030",
       "base": "AT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -445,6 +482,7 @@
       "symbol": "AT/USDT:USDT"
     },
     {
+      "asset_id": "ATH-20240613",
       "base": "ATH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -457,6 +495,7 @@
       "symbol": "ATH/USDT:USDT"
     },
     {
+      "asset_id": "ATOM-20191112",
       "base": "ATOM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -469,6 +508,7 @@
       "symbol": "ATOM/USDT:USDT"
     },
     {
+      "asset_id": "AUCTION-20231201",
       "base": "AUCTION",
       "binance_symbol": null,
       "data_source": "okx",
@@ -481,6 +521,7 @@
       "symbol": "AUCTION/USDT:USDT"
     },
     {
+      "asset_id": "AVAX-20200923",
       "base": "AVAX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -493,6 +534,7 @@
       "symbol": "AVAX/USDT:USDT"
     },
     {
+      "asset_id": "AVGO-20260429",
       "base": "AVGO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -505,6 +547,7 @@
       "symbol": "AVGO/USDT:USDT"
     },
     {
+      "asset_id": "AVNT-20250922",
       "base": "AVNT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -517,6 +560,7 @@
       "symbol": "AVNT/USDT:USDT"
     },
     {
+      "asset_id": "AXS-20210728",
       "base": "AXS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -529,6 +573,7 @@
       "symbol": "AXS/USDT:USDT"
     },
     {
+      "asset_id": "AZTEC-20260211",
       "base": "AZTEC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -541,6 +586,7 @@
       "symbol": "AZTEC/USDT:USDT"
     },
     {
+      "asset_id": "BABY-20250410",
       "base": "BABY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -553,6 +599,7 @@
       "symbol": "BABY/USDT:USDT"
     },
     {
+      "asset_id": "BAND-20200907",
       "base": "BAND",
       "binance_symbol": null,
       "data_source": "okx",
@@ -565,6 +612,7 @@
       "symbol": "BAND/USDT:USDT"
     },
     {
+      "asset_id": "BARD-20250918",
       "base": "BARD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -577,6 +625,7 @@
       "symbol": "BARD/USDT:USDT"
     },
     {
+      "asset_id": "BASED-20260330",
       "base": "BASED",
       "binance_symbol": null,
       "data_source": "okx",
@@ -589,6 +638,7 @@
       "symbol": "BASED/USDT:USDT"
     },
     {
+      "asset_id": "BAT-20200828",
       "base": "BAT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -601,6 +651,7 @@
       "symbol": "BAT/USDT:USDT"
     },
     {
+      "asset_id": "BB-20260601",
       "base": "BB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -613,6 +664,7 @@
       "symbol": "BB/USDT:USDT"
     },
     {
+      "asset_id": "BCH-20191112",
       "base": "BCH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -625,6 +677,7 @@
       "symbol": "BCH/USDT:USDT"
     },
     {
+      "asset_id": "BE-20260527",
       "base": "BE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -637,6 +690,7 @@
       "symbol": "BE/USDT:USDT"
     },
     {
+      "asset_id": "BEAT-20251112",
       "base": "BEAT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -649,6 +703,7 @@
       "symbol": "BEAT/USDT:USDT"
     },
     {
+      "asset_id": "BERA-20250206",
       "base": "BERA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -661,6 +716,7 @@
       "symbol": "BERA/USDT:USDT"
     },
     {
+      "asset_id": "BICO-20211209",
       "base": "BICO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -673,6 +729,7 @@
       "symbol": "BICO/USDT:USDT"
     },
     {
+      "asset_id": "BIGTIME-20231012",
       "base": "BIGTIME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -685,6 +742,7 @@
       "symbol": "BIGTIME/USDT:USDT"
     },
     {
+      "asset_id": "BILL-20260506",
       "base": "BILL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -697,6 +755,7 @@
       "symbol": "BILL/USDT:USDT"
     },
     {
+      "asset_id": "BIO-20250103",
       "base": "BIO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -709,6 +768,7 @@
       "symbol": "BIO/USDT:USDT"
     },
     {
+      "asset_id": "BLEND-20260429",
       "base": "BLEND",
       "binance_symbol": null,
       "data_source": "okx",
@@ -721,6 +781,7 @@
       "symbol": "BLEND/USDT:USDT"
     },
     {
+      "asset_id": "BLUR-20230215",
       "base": "BLUR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -733,6 +794,7 @@
       "symbol": "BLUR/USDT:USDT"
     },
     {
+      "asset_id": "BMNR-20260427",
       "base": "BMNR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -745,6 +807,7 @@
       "symbol": "BMNR/USDT:USDT"
     },
     {
+      "asset_id": "BNB-20221223",
       "base": "BNB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -757,6 +820,7 @@
       "symbol": "BNB/USDT:USDT"
     },
     {
+      "asset_id": "BOME-20240815",
       "base": "BOME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -769,6 +833,7 @@
       "symbol": "BOME/USDT:USDT"
     },
     {
+      "asset_id": "BONK-20240108",
       "base": "BONK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -781,6 +846,7 @@
       "symbol": "BONK/USDT:USDT"
     },
     {
+      "asset_id": "BRETT-20240906",
       "base": "BRETT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -793,6 +859,7 @@
       "symbol": "BRETT/USDT:USDT"
     },
     {
+      "asset_id": "BREV-20251230",
       "base": "BREV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -805,6 +872,7 @@
       "symbol": "BREV/USDT:USDT"
     },
     {
+      "asset_id": "BSB-20260402",
       "base": "BSB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -817,6 +885,7 @@
       "symbol": "BSB/USDT:USDT"
     },
     {
+      "asset_id": "BTC-20191112",
       "base": "BTC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -829,6 +898,7 @@
       "symbol": "BTC/USDT:USDT"
     },
     {
+      "asset_id": "BZ-20260324",
       "base": "BZ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -841,6 +911,7 @@
       "symbol": "BZ/USDT:USDT"
     },
     {
+      "asset_id": "CBRS-20260515",
       "base": "CBRS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -853,6 +924,7 @@
       "symbol": "CBRS/USDT:USDT"
     },
     {
+      "asset_id": "CC-20251031",
       "base": "CC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -865,6 +937,7 @@
       "symbol": "CC/USDT:USDT"
     },
     {
+      "asset_id": "CELO-20210924",
       "base": "CELO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -877,6 +950,7 @@
       "symbol": "CELO/USDT:USDT"
     },
     {
+      "asset_id": "CFX-20210312",
       "base": "CFX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -889,6 +963,7 @@
       "symbol": "CFX/USDT:USDT"
     },
     {
+      "asset_id": "CHIP-20260421",
       "base": "CHIP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -901,6 +976,7 @@
       "symbol": "CHIP/USDT:USDT"
     },
     {
+      "asset_id": "CHZ-20210312",
       "base": "CHZ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -913,6 +989,7 @@
       "symbol": "CHZ/USDT:USDT"
     },
     {
+      "asset_id": "CIEN-20260611",
       "base": "CIEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -925,6 +1002,7 @@
       "symbol": "CIEN/USDT:USDT"
     },
     {
+      "asset_id": "CL-20260304",
       "base": "CL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -937,6 +1015,7 @@
       "symbol": "CL/USDT:USDT"
     },
     {
+      "asset_id": "COAI-20251015",
       "base": "COAI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -949,6 +1028,7 @@
       "symbol": "COAI/USDT:USDT"
     },
     {
+      "asset_id": "COHR-20260513",
       "base": "COHR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -961,6 +1041,7 @@
       "symbol": "COHR/USDT:USDT"
     },
     {
+      "asset_id": "COIN-20260226",
       "base": "COIN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -973,6 +1054,7 @@
       "symbol": "COIN/USDT:USDT"
     },
     {
+      "asset_id": "COMP-20200421",
       "base": "COMP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -985,6 +1067,7 @@
       "symbol": "COMP/USDT:USDT"
     },
     {
+      "asset_id": "CORE-20230208",
       "base": "CORE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -997,6 +1080,7 @@
       "symbol": "CORE/USDT:USDT"
     },
     {
+      "asset_id": "COST-20260427",
       "base": "COST",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1009,6 +1093,7 @@
       "symbol": "COST/USDT:USDT"
     },
     {
+      "asset_id": "CRCL-20260226",
       "base": "CRCL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1021,6 +1106,7 @@
       "symbol": "CRCL/USDT:USDT"
     },
     {
+      "asset_id": "CRDO-20260611",
       "base": "CRDO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1033,6 +1119,7 @@
       "symbol": "CRDO/USDT:USDT"
     },
     {
+      "asset_id": "CRO-20210408",
       "base": "CRO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1045,6 +1132,7 @@
       "symbol": "CRO/USDT:USDT"
     },
     {
+      "asset_id": "CRV-20200904",
       "base": "CRV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1057,6 +1145,7 @@
       "symbol": "CRV/USDT:USDT"
     },
     {
+      "asset_id": "CRWD-20260526",
       "base": "CRWD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1069,6 +1158,7 @@
       "symbol": "CRWD/USDT:USDT"
     },
     {
+      "asset_id": "CRWV-20260410",
       "base": "CRWV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1081,6 +1171,7 @@
       "symbol": "CRWV/USDT:USDT"
     },
     {
+      "asset_id": "CSCO-20260519",
       "base": "CSCO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1093,6 +1184,7 @@
       "symbol": "CSCO/USDT:USDT"
     },
     {
+      "asset_id": "CVX-20240625",
       "base": "CVX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1105,6 +1197,7 @@
       "symbol": "CVX/USDT:USDT"
     },
     {
+      "asset_id": "DASH-20251106",
       "base": "DASH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1117,6 +1210,7 @@
       "symbol": "DASH/USDT:USDT"
     },
     {
+      "asset_id": "DELL-20260528",
       "base": "DELL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1129,6 +1223,7 @@
       "symbol": "DELL/USDT:USDT"
     },
     {
+      "asset_id": "DOGE-20200421",
       "base": "DOGE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1141,6 +1236,7 @@
       "symbol": "DOGE/USDT:USDT"
     },
     {
+      "asset_id": "DOOD-20250512",
       "base": "DOOD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1153,6 +1249,7 @@
       "symbol": "DOOD/USDT:USDT"
     },
     {
+      "asset_id": "DOT-20200825",
       "base": "DOT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1165,6 +1262,7 @@
       "symbol": "DOT/USDT:USDT"
     },
     {
+      "asset_id": "DRAM-20260508",
       "base": "DRAM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1177,6 +1275,7 @@
       "symbol": "DRAM/USDT:USDT"
     },
     {
+      "asset_id": "DYDX-20210908",
       "base": "DYDX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1189,6 +1288,7 @@
       "symbol": "DYDX/USDT:USDT"
     },
     {
+      "asset_id": "EDEN-20250930",
       "base": "EDEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1201,6 +1301,7 @@
       "symbol": "EDEN/USDT:USDT"
     },
     {
+      "asset_id": "EDGE-20260401",
       "base": "EDGE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1213,6 +1314,7 @@
       "symbol": "EDGE/USDT:USDT"
     },
     {
+      "asset_id": "EGLD-20201222",
       "base": "EGLD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1225,6 +1327,7 @@
       "symbol": "EGLD/USDT:USDT"
     },
     {
+      "asset_id": "EIGEN-20241001",
       "base": "EIGEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1237,6 +1340,7 @@
       "symbol": "EIGEN/USDT:USDT"
     },
     {
+      "asset_id": "ENA-20250917",
       "base": "ENA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1249,6 +1353,7 @@
       "symbol": "ENA/USDT:USDT"
     },
     {
+      "asset_id": "ENJ-20240301",
       "base": "ENJ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1261,6 +1366,7 @@
       "symbol": "ENJ/USDT:USDT"
     },
     {
+      "asset_id": "ENS-20211111",
       "base": "ENS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1273,6 +1379,7 @@
       "symbol": "ENS/USDT:USDT"
     },
     {
+      "asset_id": "ENSO-20251029",
       "base": "ENSO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1285,6 +1392,7 @@
       "symbol": "ENSO/USDT:USDT"
     },
     {
+      "asset_id": "ESP-20260210",
       "base": "ESP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1297,6 +1405,7 @@
       "symbol": "ESP/USDT:USDT"
     },
     {
+      "asset_id": "ETC-20191112",
       "base": "ETC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1309,6 +1418,7 @@
       "symbol": "ETC/USDT:USDT"
     },
     {
+      "asset_id": "ETH-20191112",
       "base": "ETH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1321,6 +1431,7 @@
       "symbol": "ETH/USDT:USDT"
     },
     {
+      "asset_id": "ETHFI-20240318",
       "base": "ETHFI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1333,6 +1444,7 @@
       "symbol": "ETHFI/USDT:USDT"
     },
     {
+      "asset_id": "ETHW-20220916",
       "base": "ETHW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1345,6 +1457,7 @@
       "symbol": "ETHW/USDT:USDT"
     },
     {
+      "asset_id": "EWJ-20260311",
       "base": "EWJ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1357,6 +1470,7 @@
       "symbol": "EWJ/USDT:USDT"
     },
     {
+      "asset_id": "EWT-20260603",
       "base": "EWT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1369,6 +1483,7 @@
       "symbol": "EWT/USDT:USDT"
     },
     {
+      "asset_id": "EWY-20260311",
       "base": "EWY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1381,6 +1496,7 @@
       "symbol": "EWY/USDT:USDT"
     },
     {
+      "asset_id": "F-20251025",
       "base": "F",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1393,6 +1509,7 @@
       "symbol": "F/USDT:USDT"
     },
     {
+      "asset_id": "FARTCOIN-20241220",
       "base": "FARTCOIN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1405,6 +1522,7 @@
       "symbol": "FARTCOIN/USDT:USDT"
     },
     {
+      "asset_id": "FIL-20190810",
       "base": "FIL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1417,6 +1535,7 @@
       "symbol": "FIL/USDT:USDT"
     },
     {
+      "asset_id": "FLNC-20260611",
       "base": "FLNC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1429,6 +1548,7 @@
       "symbol": "FLNC/USDT:USDT"
     },
     {
+      "asset_id": "FLOKI-20230220",
       "base": "FLOKI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1441,6 +1561,7 @@
       "symbol": "FLOKI/USDT:USDT"
     },
     {
+      "asset_id": "FLOW-20231107",
       "base": "FLOW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1453,6 +1574,7 @@
       "symbol": "FLOW/USDT:USDT"
     },
     {
+      "asset_id": "FOGO-20260110",
       "base": "FOGO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1465,6 +1587,7 @@
       "symbol": "FOGO/USDT:USDT"
     },
     {
+      "asset_id": "FTT-20220501",
       "base": "FTT",
       "binance_symbol": "FTTUSDT",
       "data_source": "binance_vision",
@@ -1477,6 +1600,7 @@
       "symbol": "FTT/USDT:USDT"
     },
     {
+      "asset_id": "GALA-20210924",
       "base": "GALA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1489,6 +1613,7 @@
       "symbol": "GALA/USDT:USDT"
     },
     {
+      "asset_id": "GAS-20231024",
       "base": "GAS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1501,6 +1626,7 @@
       "symbol": "GAS/USDT:USDT"
     },
     {
+      "asset_id": "GEV-20260521",
       "base": "GEV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1513,6 +1639,7 @@
       "symbol": "GEV/USDT:USDT"
     },
     {
+      "asset_id": "GIGGLE-20251025",
       "base": "GIGGLE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1525,6 +1652,7 @@
       "symbol": "GIGGLE/USDT:USDT"
     },
     {
+      "asset_id": "GLM-20240510",
       "base": "GLM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1537,6 +1665,7 @@
       "symbol": "GLM/USDT:USDT"
     },
     {
+      "asset_id": "GLW-20260518",
       "base": "GLW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1549,6 +1678,7 @@
       "symbol": "GLW/USDT:USDT"
     },
     {
+      "asset_id": "GME-20260508",
       "base": "GME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1561,6 +1691,7 @@
       "symbol": "GME/USDT:USDT"
     },
     {
+      "asset_id": "GMT-20220401",
       "base": "GMT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1573,6 +1704,7 @@
       "symbol": "GMT/USDT:USDT"
     },
     {
+      "asset_id": "GMX-20230202",
       "base": "GMX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1585,6 +1717,7 @@
       "symbol": "GMX/USDT:USDT"
     },
     {
+      "asset_id": "GOOGL-20260304",
       "base": "GOOGL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1597,6 +1730,7 @@
       "symbol": "GOOGL/USDT:USDT"
     },
     {
+      "asset_id": "GPS-20250304",
       "base": "GPS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1609,6 +1743,7 @@
       "symbol": "GPS/USDT:USDT"
     },
     {
+      "asset_id": "GRASS-20241028",
       "base": "GRASS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1621,6 +1756,7 @@
       "symbol": "GRASS/USDT:USDT"
     },
     {
+      "asset_id": "GRT-20201220",
       "base": "GRT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1633,6 +1769,7 @@
       "symbol": "GRT/USDT:USDT"
     },
     {
+      "asset_id": "H-20250703",
       "base": "H",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1645,6 +1782,7 @@
       "symbol": "H/USDT:USDT"
     },
     {
+      "asset_id": "HBAR-20230816",
       "base": "HBAR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1657,6 +1795,7 @@
       "symbol": "HBAR/USDT:USDT"
     },
     {
+      "asset_id": "HIMS-20260427",
       "base": "HIMS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1669,6 +1808,7 @@
       "symbol": "HIMS/USDT:USDT"
     },
     {
+      "asset_id": "HMSTR-20240926",
       "base": "HMSTR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1681,6 +1821,7 @@
       "symbol": "HMSTR/USDT:USDT"
     },
     {
+      "asset_id": "HOME-20250613",
       "base": "HOME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1693,6 +1834,7 @@
       "symbol": "HOME/USDT:USDT"
     },
     {
+      "asset_id": "HOOD-20260225",
       "base": "HOOD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1705,6 +1847,7 @@
       "symbol": "HOOD/USDT:USDT"
     },
     {
+      "asset_id": "HPE-20260602",
       "base": "HPE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1717,6 +1860,7 @@
       "symbol": "HPE/USDT:USDT"
     },
     {
+      "asset_id": "HUMA-20250526",
       "base": "HUMA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1729,6 +1873,7 @@
       "symbol": "HUMA/USDT:USDT"
     },
     {
+      "asset_id": "HYPE-20250221",
       "base": "HYPE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1741,6 +1886,7 @@
       "symbol": "HYPE/USDT:USDT"
     },
     {
+      "asset_id": "HYUNDAI-20260610",
       "base": "HYUNDAI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1753,6 +1899,7 @@
       "symbol": "HYUNDAI/USDT:USDT"
     },
     {
+      "asset_id": "IBM-20260527",
       "base": "IBM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1765,6 +1912,7 @@
       "symbol": "IBM/USDT:USDT"
     },
     {
+      "asset_id": "ICP-20210514",
       "base": "ICP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1777,6 +1925,7 @@
       "symbol": "ICP/USDT:USDT"
     },
     {
+      "asset_id": "ICX-20240223",
       "base": "ICX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1789,6 +1938,7 @@
       "symbol": "ICX/USDT:USDT"
     },
     {
+      "asset_id": "IMX-20211118",
       "base": "IMX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1801,6 +1951,7 @@
       "symbol": "IMX/USDT:USDT"
     },
     {
+      "asset_id": "INFQ-20260526",
       "base": "INFQ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1813,6 +1964,7 @@
       "symbol": "INFQ/USDT:USDT"
     },
     {
+      "asset_id": "INIT-20250424",
       "base": "INIT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1825,6 +1977,7 @@
       "symbol": "INIT/USDT:USDT"
     },
     {
+      "asset_id": "INJ-20231130",
       "base": "INJ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1837,6 +1990,7 @@
       "symbol": "INJ/USDT:USDT"
     },
     {
+      "asset_id": "INTC-20260226",
       "base": "INTC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1849,6 +2003,7 @@
       "symbol": "INTC/USDT:USDT"
     },
     {
+      "asset_id": "IOST-20200421",
       "base": "IOST",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1861,6 +2016,7 @@
       "symbol": "IOST/USDT:USDT"
     },
     {
+      "asset_id": "IOTA-20200421",
       "base": "IOTA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1873,6 +2029,7 @@
       "symbol": "IOTA/USDT:USDT"
     },
     {
+      "asset_id": "IP-20250213",
       "base": "IP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1885,6 +2042,7 @@
       "symbol": "IP/USDT:USDT"
     },
     {
+      "asset_id": "IREN-20260608",
       "base": "IREN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1897,6 +2055,7 @@
       "symbol": "IREN/USDT:USDT"
     },
     {
+      "asset_id": "IRYS-20260527",
       "base": "IRYS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1909,6 +2068,7 @@
       "symbol": "IRYS/USDT:USDT"
     },
     {
+      "asset_id": "ISRG-20260611",
       "base": "ISRG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1921,6 +2081,7 @@
       "symbol": "ISRG/USDT:USDT"
     },
     {
+      "asset_id": "IWM-20260410",
       "base": "IWM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1933,6 +2094,7 @@
       "symbol": "IWM/USDT:USDT"
     },
     {
+      "asset_id": "JELLYJELLY-20250326",
       "base": "JELLYJELLY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1945,6 +2107,7 @@
       "symbol": "JELLYJELLY/USDT:USDT"
     },
     {
+      "asset_id": "JTO-20240108",
       "base": "JTO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1957,6 +2120,7 @@
       "symbol": "JTO/USDT:USDT"
     },
     {
+      "asset_id": "JUP-20240131",
       "base": "JUP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1969,6 +2133,7 @@
       "symbol": "JUP/USDT:USDT"
     },
     {
+      "asset_id": "KAITO-20250220",
       "base": "KAITO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1981,6 +2146,7 @@
       "symbol": "KAITO/USDT:USDT"
     },
     {
+      "asset_id": "KAT-20260302",
       "base": "KAT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -1993,6 +2159,7 @@
       "symbol": "KAT/USDT:USDT"
     },
     {
+      "asset_id": "KGEN-20251018",
       "base": "KGEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2005,6 +2172,7 @@
       "symbol": "KGEN/USDT:USDT"
     },
     {
+      "asset_id": "KITE-20260409",
       "base": "KITE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2017,6 +2185,7 @@
       "symbol": "KITE/USDT:USDT"
     },
     {
+      "asset_id": "KMNO-20250530",
       "base": "KMNO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2029,6 +2198,7 @@
       "symbol": "KMNO/USDT:USDT"
     },
     {
+      "asset_id": "KSM-20200908",
       "base": "KSM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2041,6 +2211,7 @@
       "symbol": "KSM/USDT:USDT"
     },
     {
+      "asset_id": "LA-20250613",
       "base": "LA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2053,6 +2224,7 @@
       "symbol": "LA/USDT:USDT"
     },
     {
+      "asset_id": "LAB-20251101",
       "base": "LAB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2065,6 +2237,7 @@
       "symbol": "LAB/USDT:USDT"
     },
     {
+      "asset_id": "LAYER-20250211",
       "base": "LAYER",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2077,6 +2250,7 @@
       "symbol": "LAYER/USDT:USDT"
     },
     {
+      "asset_id": "LDO-20230202",
       "base": "LDO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2089,6 +2263,7 @@
       "symbol": "LDO/USDT:USDT"
     },
     {
+      "asset_id": "LIGHT-20251216",
       "base": "LIGHT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2101,6 +2276,7 @@
       "symbol": "LIGHT/USDT:USDT"
     },
     {
+      "asset_id": "LINEA-20250901",
       "base": "LINEA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2113,6 +2289,7 @@
       "symbol": "LINEA/USDT:USDT"
     },
     {
+      "asset_id": "LINK-20200228",
       "base": "LINK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2125,6 +2302,7 @@
       "symbol": "LINK/USDT:USDT"
     },
     {
+      "asset_id": "LIT-20251224",
       "base": "LIT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2137,6 +2315,7 @@
       "symbol": "LIT/USDT:USDT"
     },
     {
+      "asset_id": "LITE-20260508",
       "base": "LITE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2149,6 +2328,7 @@
       "symbol": "LITE/USDT:USDT"
     },
     {
+      "asset_id": "LLY-20260427",
       "base": "LLY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2161,6 +2341,7 @@
       "symbol": "LLY/USDT:USDT"
     },
     {
+      "asset_id": "LPT-20210423",
       "base": "LPT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2173,6 +2354,7 @@
       "symbol": "LPT/USDT:USDT"
     },
     {
+      "asset_id": "LQTY-20240112",
       "base": "LQTY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2185,6 +2367,7 @@
       "symbol": "LQTY/USDT:USDT"
     },
     {
+      "asset_id": "LRC-20200909",
       "base": "LRC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2197,6 +2380,7 @@
       "symbol": "LRC/USDT:USDT"
     },
     {
+      "asset_id": "LTC-20191112",
       "base": "LTC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2209,6 +2393,20 @@
       "symbol": "LTC/USDT:USDT"
     },
     {
+      "asset_id": "LUNA-20190726",
+      "base": "LUNA",
+      "binance_symbol": "LUNAUSDT",
+      "data_source": "binance_vision",
+      "delisting_date": "2022-05-13",
+      "inst_id": "LUNA-USDT-SWAP",
+      "listing_date": "2019-07-26",
+      "notes": "Old LUNA generation from Binance Vision; do not concatenate with OKX current LUNA listed 2022-05-28.",
+      "quote": "USDT",
+      "settle": "USDT",
+      "symbol": "LUNA/USDT:USDT"
+    },
+    {
+      "asset_id": "LUNA-20220528",
       "base": "LUNA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2221,6 +2419,7 @@
       "symbol": "LUNA/USDT:USDT"
     },
     {
+      "asset_id": "LUNR-20260601",
       "base": "LUNR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2233,6 +2432,7 @@
       "symbol": "LUNR/USDT:USDT"
     },
     {
+      "asset_id": "MAGIC-20230202",
       "base": "MAGIC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2245,6 +2445,7 @@
       "symbol": "MAGIC/USDT:USDT"
     },
     {
+      "asset_id": "MANA-20210312",
       "base": "MANA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2257,6 +2458,7 @@
       "symbol": "MANA/USDT:USDT"
     },
     {
+      "asset_id": "MASK-20210304",
       "base": "MASK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2269,6 +2471,7 @@
       "symbol": "MASK/USDT:USDT"
     },
     {
+      "asset_id": "ME-20241210",
       "base": "ME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2281,6 +2484,7 @@
       "symbol": "ME/USDT:USDT"
     },
     {
+      "asset_id": "MEGA-20260430",
       "base": "MEGA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2293,6 +2497,7 @@
       "symbol": "MEGA/USDT:USDT"
     },
     {
+      "asset_id": "MEME-20231103",
       "base": "MEME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2305,6 +2510,7 @@
       "symbol": "MEME/USDT:USDT"
     },
     {
+      "asset_id": "MERL-20240419",
       "base": "MERL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2317,6 +2523,7 @@
       "symbol": "MERL/USDT:USDT"
     },
     {
+      "asset_id": "MET-20251010",
       "base": "MET",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2329,6 +2536,7 @@
       "symbol": "MET/USDT:USDT"
     },
     {
+      "asset_id": "META-20260304",
       "base": "META",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2341,6 +2549,7 @@
       "symbol": "META/USDT:USDT"
     },
     {
+      "asset_id": "METIS-20231228",
       "base": "METIS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2353,6 +2562,7 @@
       "symbol": "METIS/USDT:USDT"
     },
     {
+      "asset_id": "MEW-20240415",
       "base": "MEW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2365,6 +2575,7 @@
       "symbol": "MEW/USDT:USDT"
     },
     {
+      "asset_id": "MINA-20210609",
       "base": "MINA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2377,6 +2588,7 @@
       "symbol": "MINA/USDT:USDT"
     },
     {
+      "asset_id": "MMT-20251104",
       "base": "MMT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2389,6 +2601,7 @@
       "symbol": "MMT/USDT:USDT"
     },
     {
+      "asset_id": "MON-20251010",
       "base": "MON",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2401,6 +2614,7 @@
       "symbol": "MON/USDT:USDT"
     },
     {
+      "asset_id": "MOODENG-20241003",
       "base": "MOODENG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2413,6 +2627,7 @@
       "symbol": "MOODENG/USDT:USDT"
     },
     {
+      "asset_id": "MORPHO-20241125",
       "base": "MORPHO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2425,6 +2640,7 @@
       "symbol": "MORPHO/USDT:USDT"
     },
     {
+      "asset_id": "MOVE-20241209",
       "base": "MOVE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2437,6 +2653,7 @@
       "symbol": "MOVE/USDT:USDT"
     },
     {
+      "asset_id": "MRVL-20260512",
       "base": "MRVL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2449,6 +2666,7 @@
       "symbol": "MRVL/USDT:USDT"
     },
     {
+      "asset_id": "MSFT-20260304",
       "base": "MSFT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2461,6 +2679,7 @@
       "symbol": "MSFT/USDT:USDT"
     },
     {
+      "asset_id": "MSTR-20260225",
       "base": "MSTR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2473,6 +2692,7 @@
       "symbol": "MSTR/USDT:USDT"
     },
     {
+      "asset_id": "MU-20260304",
       "base": "MU",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2485,6 +2705,7 @@
       "symbol": "MU/USDT:USDT"
     },
     {
+      "asset_id": "MUBARAK-20250603",
       "base": "MUBARAK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2497,6 +2718,7 @@
       "symbol": "MUBARAK/USDT:USDT"
     },
     {
+      "asset_id": "NBIS-20260519",
       "base": "NBIS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2509,6 +2731,7 @@
       "symbol": "NBIS/USDT:USDT"
     },
     {
+      "asset_id": "NEAR-20201221",
       "base": "NEAR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2521,6 +2744,7 @@
       "symbol": "NEAR/USDT:USDT"
     },
     {
+      "asset_id": "NEIRO-20241003",
       "base": "NEIRO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2533,6 +2757,7 @@
       "symbol": "NEIRO/USDT:USDT"
     },
     {
+      "asset_id": "NEO-20200228",
       "base": "NEO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2545,6 +2770,7 @@
       "symbol": "NEO/USDT:USDT"
     },
     {
+      "asset_id": "NFLX-20260311",
       "base": "NFLX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2557,6 +2783,7 @@
       "symbol": "NFLX/USDT:USDT"
     },
     {
+      "asset_id": "NG-20260310",
       "base": "NG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2569,6 +2796,7 @@
       "symbol": "NG/USDT:USDT"
     },
     {
+      "asset_id": "NIGHT-20251209",
       "base": "NIGHT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2581,6 +2809,7 @@
       "symbol": "NIGHT/USDT:USDT"
     },
     {
+      "asset_id": "NMR-20240111",
       "base": "NMR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2593,6 +2822,7 @@
       "symbol": "NMR/USDT:USDT"
     },
     {
+      "asset_id": "NOK-20260527",
       "base": "NOK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2605,6 +2835,7 @@
       "symbol": "NOK/USDT:USDT"
     },
     {
+      "asset_id": "NOT-20240516",
       "base": "NOT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2617,6 +2848,7 @@
       "symbol": "NOT/USDT:USDT"
     },
     {
+      "asset_id": "NOW-20260602",
       "base": "NOW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2629,6 +2861,7 @@
       "symbol": "NOW/USDT:USDT"
     },
     {
+      "asset_id": "NVDA-20260304",
       "base": "NVDA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2641,6 +2874,7 @@
       "symbol": "NVDA/USDT:USDT"
     },
     {
+      "asset_id": "OFC-20260409",
       "base": "OFC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2653,6 +2887,7 @@
       "symbol": "OFC/USDT:USDT"
     },
     {
+      "asset_id": "OKB-20250904",
       "base": "OKB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2665,6 +2900,7 @@
       "symbol": "OKB/USDT:USDT"
     },
     {
+      "asset_id": "OL-20251029",
       "base": "OL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2677,6 +2913,7 @@
       "symbol": "OL/USDT:USDT"
     },
     {
+      "asset_id": "ONDO-20240806",
       "base": "ONDO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2689,6 +2926,7 @@
       "symbol": "ONDO/USDT:USDT"
     },
     {
+      "asset_id": "ONE-20240220",
       "base": "ONE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2701,6 +2939,7 @@
       "symbol": "ONE/USDT:USDT"
     },
     {
+      "asset_id": "ONT-20200421",
       "base": "ONT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2713,6 +2952,7 @@
       "symbol": "ONT/USDT:USDT"
     },
     {
+      "asset_id": "OP-20220601",
       "base": "OP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2725,6 +2965,7 @@
       "symbol": "OP/USDT:USDT"
     },
     {
+      "asset_id": "OPENAI-20260507",
       "base": "OPENAI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2737,6 +2978,7 @@
       "symbol": "OPENAI/USDT:USDT"
     },
     {
+      "asset_id": "OPG-20260423",
       "base": "OPG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2749,6 +2991,7 @@
       "symbol": "OPG/USDT:USDT"
     },
     {
+      "asset_id": "OPN-20260223",
       "base": "OPN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2761,6 +3004,7 @@
       "symbol": "OPN/USDT:USDT"
     },
     {
+      "asset_id": "ORCL-20260311",
       "base": "ORCL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2773,6 +3017,7 @@
       "symbol": "ORCL/USDT:USDT"
     },
     {
+      "asset_id": "ORDER-20250930",
       "base": "ORDER",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2785,6 +3030,7 @@
       "symbol": "ORDER/USDT:USDT"
     },
     {
+      "asset_id": "ORDI-20230521",
       "base": "ORDI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2797,6 +3043,7 @@
       "symbol": "ORDI/USDT:USDT"
     },
     {
+      "asset_id": "PANW-20260608",
       "base": "PANW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2809,6 +3056,7 @@
       "symbol": "PANW/USDT:USDT"
     },
     {
+      "asset_id": "PARTI-20250325",
       "base": "PARTI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2821,6 +3069,7 @@
       "symbol": "PARTI/USDT:USDT"
     },
     {
+      "asset_id": "PENDLE-20250917",
       "base": "PENDLE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2833,6 +3082,7 @@
       "symbol": "PENDLE/USDT:USDT"
     },
     {
+      "asset_id": "PENGU-20241217",
       "base": "PENGU",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2845,6 +3095,7 @@
       "symbol": "PENGU/USDT:USDT"
     },
     {
+      "asset_id": "PEOPLE-20211202",
       "base": "PEOPLE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2857,6 +3108,7 @@
       "symbol": "PEOPLE/USDT:USDT"
     },
     {
+      "asset_id": "PEPE-20230503",
       "base": "PEPE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2869,6 +3121,7 @@
       "symbol": "PEPE/USDT:USDT"
     },
     {
+      "asset_id": "PI-20250220",
       "base": "PI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2881,6 +3134,7 @@
       "symbol": "PI/USDT:USDT"
     },
     {
+      "asset_id": "PIEVERSE-20251116",
       "base": "PIEVERSE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2893,6 +3147,7 @@
       "symbol": "PIEVERSE/USDT:USDT"
     },
     {
+      "asset_id": "PIPPIN-20251202",
       "base": "PIPPIN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2905,6 +3160,7 @@
       "symbol": "PIPPIN/USDT:USDT"
     },
     {
+      "asset_id": "PLTR-20260226",
       "base": "PLTR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2917,6 +3173,7 @@
       "symbol": "PLTR/USDT:USDT"
     },
     {
+      "asset_id": "PLUME-20250508",
       "base": "PLUME",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2929,6 +3186,7 @@
       "symbol": "PLUME/USDT:USDT"
     },
     {
+      "asset_id": "PNUT-20241112",
       "base": "PNUT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2941,6 +3199,7 @@
       "symbol": "PNUT/USDT:USDT"
     },
     {
+      "asset_id": "POL-20240924",
       "base": "POL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2953,6 +3212,7 @@
       "symbol": "POL/USDT:USDT"
     },
     {
+      "asset_id": "POPCAT-20240829",
       "base": "POPCAT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2965,6 +3225,7 @@
       "symbol": "POPCAT/USDT:USDT"
     },
     {
+      "asset_id": "PROS-20260428",
       "base": "PROS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2977,6 +3238,7 @@
       "symbol": "PROS/USDT:USDT"
     },
     {
+      "asset_id": "PROVE-20251017",
       "base": "PROVE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -2989,6 +3251,7 @@
       "symbol": "PROVE/USDT:USDT"
     },
     {
+      "asset_id": "PUMP-20250714",
       "base": "PUMP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3001,6 +3264,7 @@
       "symbol": "PUMP/USDT:USDT"
     },
     {
+      "asset_id": "PYTH-20231120",
       "base": "PYTH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3013,6 +3277,7 @@
       "symbol": "PYTH/USDT:USDT"
     },
     {
+      "asset_id": "QCOM-20260519",
       "base": "QCOM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3025,6 +3290,7 @@
       "symbol": "QCOM/USDT:USDT"
     },
     {
+      "asset_id": "QNT-20260605",
       "base": "QNT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3037,6 +3303,7 @@
       "symbol": "QNT/USDT:USDT"
     },
     {
+      "asset_id": "QQQ-20260304",
       "base": "QQQ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3049,6 +3316,7 @@
       "symbol": "QQQ/USDT:USDT"
     },
     {
+      "asset_id": "QTUM-20200421",
       "base": "QTUM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3061,6 +3329,7 @@
       "symbol": "QTUM/USDT:USDT"
     },
     {
+      "asset_id": "RAVE-20251215",
       "base": "RAVE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3073,6 +3342,7 @@
       "symbol": "RAVE/USDT:USDT"
     },
     {
+      "asset_id": "RAY-20240312",
       "base": "RAY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3085,6 +3355,7 @@
       "symbol": "RAY/USDT:USDT"
     },
     {
+      "asset_id": "RDW-20260601",
       "base": "RDW",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3097,6 +3368,7 @@
       "symbol": "RDW/USDT:USDT"
     },
     {
+      "asset_id": "RECALL-20251030",
       "base": "RECALL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3109,6 +3381,7 @@
       "symbol": "RECALL/USDT:USDT"
     },
     {
+      "asset_id": "RENDER-20240808",
       "base": "RENDER",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3121,6 +3394,7 @@
       "symbol": "RENDER/USDT:USDT"
     },
     {
+      "asset_id": "RESOLV-20250610",
       "base": "RESOLV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3133,6 +3407,7 @@
       "symbol": "RESOLV/USDT:USDT"
     },
     {
+      "asset_id": "RIVER-20260109",
       "base": "RIVER",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3145,6 +3420,7 @@
       "symbol": "RIVER/USDT:USDT"
     },
     {
+      "asset_id": "RKLB-20260512",
       "base": "RKLB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3157,6 +3433,7 @@
       "symbol": "RKLB/USDT:USDT"
     },
     {
+      "asset_id": "RLS-20251202",
       "base": "RLS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3169,6 +3446,7 @@
       "symbol": "RLS/USDT:USDT"
     },
     {
+      "asset_id": "ROBO-20260227",
       "base": "ROBO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3181,6 +3459,7 @@
       "symbol": "ROBO/USDT:USDT"
     },
     {
+      "asset_id": "RSR-20200909",
       "base": "RSR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3193,6 +3472,7 @@
       "symbol": "RSR/USDT:USDT"
     },
     {
+      "asset_id": "RVN-20210423",
       "base": "RVN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3205,6 +3485,7 @@
       "symbol": "RVN/USDT:USDT"
     },
     {
+      "asset_id": "S-20250121",
       "base": "S",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3217,6 +3498,7 @@
       "symbol": "S/USDT:USDT"
     },
     {
+      "asset_id": "SAHARA-20250626",
       "base": "SAHARA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3229,6 +3511,7 @@
       "symbol": "SAHARA/USDT:USDT"
     },
     {
+      "asset_id": "SAMSUNG-20260610",
       "base": "SAMSUNG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3241,6 +3524,7 @@
       "symbol": "SAMSUNG/USDT:USDT"
     },
     {
+      "asset_id": "SAND-20210402",
       "base": "SAND",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3253,6 +3537,7 @@
       "symbol": "SAND/USDT:USDT"
     },
     {
+      "asset_id": "SAPIEN-20251106",
       "base": "SAPIEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3265,6 +3550,7 @@
       "symbol": "SAPIEN/USDT:USDT"
     },
     {
+      "asset_id": "SATS-20231218",
       "base": "SATS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3277,6 +3563,7 @@
       "symbol": "SATS/USDT:USDT"
     },
     {
+      "asset_id": "SEI-20251114",
       "base": "SEI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3289,6 +3576,7 @@
       "symbol": "SEI/USDT:USDT"
     },
     {
+      "asset_id": "SENT-20251114",
       "base": "SENT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3301,6 +3589,7 @@
       "symbol": "SENT/USDT:USDT"
     },
     {
+      "asset_id": "SHELL-20250227",
       "base": "SHELL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3313,6 +3602,7 @@
       "symbol": "SHELL/USDT:USDT"
     },
     {
+      "asset_id": "SHIB-20210509",
       "base": "SHIB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3325,6 +3615,7 @@
       "symbol": "SHIB/USDT:USDT"
     },
     {
+      "asset_id": "SHLD-20260512",
       "base": "SHLD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3337,6 +3628,7 @@
       "symbol": "SHLD/USDT:USDT"
     },
     {
+      "asset_id": "SIGN-20250428",
       "base": "SIGN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3349,6 +3641,7 @@
       "symbol": "SIGN/USDT:USDT"
     },
     {
+      "asset_id": "SKHYNIX-20260610",
       "base": "SKHYNIX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3361,6 +3654,7 @@
       "symbol": "SKHYNIX/USDT:USDT"
     },
     {
+      "asset_id": "SKY-20250911",
       "base": "SKY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3373,6 +3667,7 @@
       "symbol": "SKY/USDT:USDT"
     },
     {
+      "asset_id": "SLX-20260601",
       "base": "SLX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3385,6 +3680,7 @@
       "symbol": "SLX/USDT:USDT"
     },
     {
+      "asset_id": "SNDK-20260304",
       "base": "SNDK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3397,6 +3693,7 @@
       "symbol": "SNDK/USDT:USDT"
     },
     {
+      "asset_id": "SNX-20200821",
       "base": "SNX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3409,6 +3706,7 @@
       "symbol": "SNX/USDT:USDT"
     },
     {
+      "asset_id": "SOL-20210122",
       "base": "SOL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3421,6 +3719,7 @@
       "symbol": "SOL/USDT:USDT"
     },
     {
+      "asset_id": "SOON-20250523",
       "base": "SOON",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3433,6 +3732,7 @@
       "symbol": "SOON/USDT:USDT"
     },
     {
+      "asset_id": "SOPH-20250528",
       "base": "SOPH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3445,6 +3745,7 @@
       "symbol": "SOPH/USDT:USDT"
     },
     {
+      "asset_id": "SOXL-20260519",
       "base": "SOXL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3457,6 +3758,7 @@
       "symbol": "SOXL/USDT:USDT"
     },
     {
+      "asset_id": "SPACE-20260123",
       "base": "SPACE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3469,6 +3771,7 @@
       "symbol": "SPACE/USDT:USDT"
     },
     {
+      "asset_id": "SPCX-20260507",
       "base": "SPCX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3481,6 +3784,7 @@
       "symbol": "SPCX/USDT:USDT"
     },
     {
+      "asset_id": "SPK-20250617",
       "base": "SPK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3493,6 +3797,7 @@
       "symbol": "SPK/USDT:USDT"
     },
     {
+      "asset_id": "SPX-20250717",
       "base": "SPX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3505,6 +3810,7 @@
       "symbol": "SPX/USDT:USDT"
     },
     {
+      "asset_id": "SPY-20260304",
       "base": "SPY",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3517,6 +3823,7 @@
       "symbol": "SPY/USDT:USDT"
     },
     {
+      "asset_id": "SRM-20210101",
       "base": "SRM",
       "binance_symbol": "SRMUSDT",
       "data_source": "binance_vision",
@@ -3529,6 +3836,7 @@
       "symbol": "SRM/USDT:USDT"
     },
     {
+      "asset_id": "SSV-20231123",
       "base": "SSV",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3541,6 +3849,7 @@
       "symbol": "SSV/USDT:USDT"
     },
     {
+      "asset_id": "STABLE-20251208",
       "base": "STABLE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3553,6 +3862,7 @@
       "symbol": "STABLE/USDT:USDT"
     },
     {
+      "asset_id": "STRK-20240220",
       "base": "STRK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3565,6 +3875,7 @@
       "symbol": "STRK/USDT:USDT"
     },
     {
+      "asset_id": "STX-20230221",
       "base": "STX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3577,6 +3888,7 @@
       "symbol": "STX/USDT:USDT"
     },
     {
+      "asset_id": "SUI-20230505",
       "base": "SUI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3589,6 +3901,7 @@
       "symbol": "SUI/USDT:USDT"
     },
     {
+      "asset_id": "SUSHI-20200902",
       "base": "SUSHI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3601,6 +3914,7 @@
       "symbol": "SUSHI/USDT:USDT"
     },
     {
+      "asset_id": "SYRUP-20250703",
       "base": "SYRUP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3613,6 +3927,7 @@
       "symbol": "SYRUP/USDT:USDT"
     },
     {
+      "asset_id": "TAO-20240920",
       "base": "TAO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3625,6 +3940,7 @@
       "symbol": "TAO/USDT:USDT"
     },
     {
+      "asset_id": "THETA-20200421",
       "base": "THETA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3637,6 +3953,7 @@
       "symbol": "THETA/USDT:USDT"
     },
     {
+      "asset_id": "TIA-20231031",
       "base": "TIA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3649,6 +3966,7 @@
       "symbol": "TIA/USDT:USDT"
     },
     {
+      "asset_id": "TON-20221228",
       "base": "TON",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3661,6 +3979,7 @@
       "symbol": "TON/USDT:USDT"
     },
     {
+      "asset_id": "TRB-20200908",
       "base": "TRB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3673,6 +3992,7 @@
       "symbol": "TRB/USDT:USDT"
     },
     {
+      "asset_id": "TRIA-20260205",
       "base": "TRIA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3685,6 +4005,7 @@
       "symbol": "TRIA/USDT:USDT"
     },
     {
+      "asset_id": "TRUMP-20250119",
       "base": "TRUMP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3697,6 +4018,7 @@
       "symbol": "TRUMP/USDT:USDT"
     },
     {
+      "asset_id": "TRUST-20251105",
       "base": "TRUST",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3709,6 +4031,7 @@
       "symbol": "TRUST/USDT:USDT"
     },
     {
+      "asset_id": "TRUTH-20251128",
       "base": "TRUTH",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3721,6 +4044,7 @@
       "symbol": "TRUTH/USDT:USDT"
     },
     {
+      "asset_id": "TRX-20191112",
       "base": "TRX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3733,6 +4057,7 @@
       "symbol": "TRX/USDT:USDT"
     },
     {
+      "asset_id": "TSLA-20260225",
       "base": "TSLA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3745,6 +4070,7 @@
       "symbol": "TSLA/USDT:USDT"
     },
     {
+      "asset_id": "TSM-20260311",
       "base": "TSM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3757,6 +4083,7 @@
       "symbol": "TSM/USDT:USDT"
     },
     {
+      "asset_id": "TURBO-20231214",
       "base": "TURBO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3769,6 +4096,7 @@
       "symbol": "TURBO/USDT:USDT"
     },
     {
+      "asset_id": "UB-20260428",
       "base": "UB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3781,6 +4109,7 @@
       "symbol": "UB/USDT:USDT"
     },
     {
+      "asset_id": "UMA-20200904",
       "base": "UMA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3793,6 +4122,7 @@
       "symbol": "UMA/USDT:USDT"
     },
     {
+      "asset_id": "UNI-20200917",
       "base": "UNI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3805,6 +4135,7 @@
       "symbol": "UNI/USDT:USDT"
     },
     {
+      "asset_id": "UP-20260408",
       "base": "UP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3817,6 +4148,7 @@
       "symbol": "UP/USDT:USDT"
     },
     {
+      "asset_id": "URNM-20260521",
       "base": "URNM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3829,6 +4161,7 @@
       "symbol": "URNM/USDT:USDT"
     },
     {
+      "asset_id": "USAR-20260427",
       "base": "USAR",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3841,6 +4174,7 @@
       "symbol": "USAR/USDT:USDT"
     },
     {
+      "asset_id": "USDC-20230312",
       "base": "USDC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3853,6 +4187,7 @@
       "symbol": "USDC/USDT:USDT"
     },
     {
+      "asset_id": "USELESS-20250725",
       "base": "USELESS",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3865,6 +4200,7 @@
       "symbol": "USELESS/USDT:USDT"
     },
     {
+      "asset_id": "USO-20260511",
       "base": "USO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3877,6 +4213,7 @@
       "symbol": "USO/USDT:USDT"
     },
     {
+      "asset_id": "VANA-20241217",
       "base": "VANA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3889,6 +4226,7 @@
       "symbol": "VANA/USDT:USDT"
     },
     {
+      "asset_id": "VIRTUAL-20241211",
       "base": "VIRTUAL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3901,6 +4239,7 @@
       "symbol": "VIRTUAL/USDT:USDT"
     },
     {
+      "asset_id": "VRT-20260528",
       "base": "VRT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3913,6 +4252,7 @@
       "symbol": "VRT/USDT:USDT"
     },
     {
+      "asset_id": "W-20240403",
       "base": "W",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3925,6 +4265,7 @@
       "symbol": "W/USDT:USDT"
     },
     {
+      "asset_id": "WAL-20250508",
       "base": "WAL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3937,6 +4278,7 @@
       "symbol": "WAL/USDT:USDT"
     },
     {
+      "asset_id": "WCT-20250415",
       "base": "WCT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3949,6 +4291,7 @@
       "symbol": "WCT/USDT:USDT"
     },
     {
+      "asset_id": "WDC-20260512",
       "base": "WDC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3961,6 +4304,7 @@
       "symbol": "WDC/USDT:USDT"
     },
     {
+      "asset_id": "WET-20251209",
       "base": "WET",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3973,6 +4317,7 @@
       "symbol": "WET/USDT:USDT"
     },
     {
+      "asset_id": "WIF-20240415",
       "base": "WIF",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3985,6 +4330,7 @@
       "symbol": "WIF/USDT:USDT"
     },
     {
+      "asset_id": "WLD-20230724",
       "base": "WLD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -3997,6 +4343,7 @@
       "symbol": "WLD/USDT:USDT"
     },
     {
+      "asset_id": "WLFI-20250823",
       "base": "WLFI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4009,6 +4356,7 @@
       "symbol": "WLFI/USDT:USDT"
     },
     {
+      "asset_id": "WOO-20230214",
       "base": "WOO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4021,6 +4369,7 @@
       "symbol": "WOO/USDT:USDT"
     },
     {
+      "asset_id": "XAG-20260128",
       "base": "XAG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4033,6 +4382,7 @@
       "symbol": "XAG/USDT:USDT"
     },
     {
+      "asset_id": "XAU-20250409",
       "base": "XAU",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4045,6 +4395,7 @@
       "symbol": "XAU/USDT:USDT"
     },
     {
+      "asset_id": "XCU-20260304",
       "base": "XCU",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4057,6 +4408,7 @@
       "symbol": "XCU/USDT:USDT"
     },
     {
+      "asset_id": "XLE-20260511",
       "base": "XLE",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4069,6 +4421,7 @@
       "symbol": "XLE/USDT:USDT"
     },
     {
+      "asset_id": "XLM-20200421",
       "base": "XLM",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4081,6 +4434,7 @@
       "symbol": "XLM/USDT:USDT"
     },
     {
+      "asset_id": "XPD-20260202",
       "base": "XPD",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4093,6 +4447,7 @@
       "symbol": "XPD/USDT:USDT"
     },
     {
+      "asset_id": "XPL-20250828",
       "base": "XPL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4105,6 +4460,7 @@
       "symbol": "XPL/USDT:USDT"
     },
     {
+      "asset_id": "XPT-20260202",
       "base": "XPT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4117,6 +4473,7 @@
       "symbol": "XPT/USDT:USDT"
     },
     {
+      "asset_id": "XRP-20191112",
       "base": "XRP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4129,6 +4486,7 @@
       "symbol": "XRP/USDT:USDT"
     },
     {
+      "asset_id": "XTZ-20200421",
       "base": "XTZ",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4141,6 +4499,7 @@
       "symbol": "XTZ/USDT:USDT"
     },
     {
+      "asset_id": "YB-20251012",
       "base": "YB",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4153,6 +4512,7 @@
       "symbol": "YB/USDT:USDT"
     },
     {
+      "asset_id": "YFI-20200902",
       "base": "YFI",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4165,6 +4525,7 @@
       "symbol": "YFI/USDT:USDT"
     },
     {
+      "asset_id": "YGG-20210806",
       "base": "YGG",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4177,6 +4538,7 @@
       "symbol": "YGG/USDT:USDT"
     },
     {
+      "asset_id": "ZAMA-20260109",
       "base": "ZAMA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4189,6 +4551,7 @@
       "symbol": "ZAMA/USDT:USDT"
     },
     {
+      "asset_id": "ZBT-20251017",
       "base": "ZBT",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4201,6 +4564,7 @@
       "symbol": "ZBT/USDT:USDT"
     },
     {
+      "asset_id": "ZEC-20251106",
       "base": "ZEC",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4213,6 +4577,7 @@
       "symbol": "ZEC/USDT:USDT"
     },
     {
+      "asset_id": "ZEN-20251103",
       "base": "ZEN",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4225,6 +4590,7 @@
       "symbol": "ZEN/USDT:USDT"
     },
     {
+      "asset_id": "ZETA-20240201",
       "base": "ZETA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4237,6 +4603,7 @@
       "symbol": "ZETA/USDT:USDT"
     },
     {
+      "asset_id": "ZIL-20200909",
       "base": "ZIL",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4249,6 +4616,7 @@
       "symbol": "ZIL/USDT:USDT"
     },
     {
+      "asset_id": "ZK-20240618",
       "base": "ZK",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4261,6 +4629,7 @@
       "symbol": "ZK/USDT:USDT"
     },
     {
+      "asset_id": "ZKP-20260107",
       "base": "ZKP",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4273,6 +4642,7 @@
       "symbol": "ZKP/USDT:USDT"
     },
     {
+      "asset_id": "ZORA-20251010",
       "base": "ZORA",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4285,6 +4655,7 @@
       "symbol": "ZORA/USDT:USDT"
     },
     {
+      "asset_id": "ZRO-20240620",
       "base": "ZRO",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4297,6 +4668,7 @@
       "symbol": "ZRO/USDT:USDT"
     },
     {
+      "asset_id": "ZRX-20200821",
       "base": "ZRX",
       "binance_symbol": null,
       "data_source": "okx",
@@ -4309,7 +4681,7 @@
       "symbol": "ZRX/USDT:USDT"
     }
   ],
-  "generated_at": "2026-06-12T02:16:18.449660+00:00",
-  "notes": "Current OKX instruments plus curated Binance Vision fallback entries for OKX-unavailable delisted contracts. See docs/probe_okx_delisted_results.md.",
-  "schema_version": 1
+  "generated_at": "2026-06-12T02:30:57.862955+00:00",
+  "notes": "Current OKX instruments plus curated Binance Vision fallback asset generations for OKX-unavailable delisted contracts. asset_id is the stable universe key; symbol is only the exchange fetch symbol. See docs/probe_okx_delisted_results.md.",
+  "schema_version": 2
 }

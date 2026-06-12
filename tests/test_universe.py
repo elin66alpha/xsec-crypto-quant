@@ -111,10 +111,11 @@ def test_load_perp_calendar_parses_listing_and_delisting_dates(tmp_path):
     listings = calendar_listing_dates(calendar)
     delistings = calendar_delisting_dates(calendar)
 
-    assert listings["FTT/USDT:USDT"] == pd.Timestamp("2021-09-01", tz="UTC")
-    assert delistings["FTT/USDT:USDT"] == pd.Timestamp("2022-11-14", tz="UTC")
-    assert pd.isna(calendar.loc["BTC/USDT:USDT", "delisting_date"])
-    assert calendar.loc["FTT/USDT:USDT", "binance_symbol"] == "FTTUSDT"
+    assert listings["FTT-20210901"] == pd.Timestamp("2021-09-01", tz="UTC")
+    assert delistings["FTT-20210901"] == pd.Timestamp("2022-11-14", tz="UTC")
+    assert pd.isna(calendar.loc["BTC-20200101", "delisting_date"])
+    assert calendar.loc["FTT-20210901", "symbol"] == "FTT/USDT:USDT"
+    assert calendar.loc["FTT-20210901", "binance_symbol"] == "FTTUSDT"
 
 
 def test_select_universe_truncates_after_delisting_without_pre_delist_signal():
@@ -153,6 +154,7 @@ def test_build_universe_history_uses_calendar_delisting_dates():
     )
     calendar = pd.DataFrame(
         {
+            "symbol": ["LIVE/USDT:USDT", "DEAD/USDT:USDT"],
             "listing_date": [
                 pd.Timestamp("2022-01-01", tz="UTC"),
                 pd.Timestamp("2022-01-01", tz="UTC"),
@@ -174,6 +176,46 @@ def test_build_universe_history_uses_calendar_delisting_dates():
 
     assert history[pd.Timestamp("2023-04-01")] == ["DEAD", "LIVE"]
     assert history[pd.Timestamp("2023-05-01")] == ["LIVE"]
+
+
+def test_build_universe_history_returns_asset_ids_for_reused_symbol():
+    dates = pd.date_range("2022-04-20", "2022-06-05", freq="D", tz="UTC")
+    old_luna = pd.Series(float("nan"), index=dates)
+    old_luna.loc[old_luna.index <= "2022-05-13"] = 100.0
+    new_luna = pd.Series(float("nan"), index=dates)
+    new_luna.loc[new_luna.index >= "2022-05-28"] = 200.0
+    df = pd.DataFrame(
+        {
+            "LUNA-20190726": old_luna,
+            "LUNA-20220528": new_luna,
+        },
+        index=dates,
+    )
+    calendar = pd.DataFrame(
+        {
+            "symbol": ["LUNA/USDT:USDT", "LUNA/USDT:USDT"],
+            "listing_date": [
+                pd.Timestamp("2019-07-26", tz="UTC"),
+                pd.Timestamp("2022-05-28", tz="UTC"),
+            ],
+            "delisting_date": [pd.Timestamp("2022-05-13", tz="UTC"), pd.NaT],
+            "data_source": ["binance_vision", "okx"],
+        },
+        index=["LUNA-20190726", "LUNA-20220528"],
+    )
+    cfg = UniverseConfig(top_n=1, min_listing_days=0, lookback_days=5, min_valid_days_ratio=0.1)
+
+    history = build_universe_history(
+        df,
+        "2022-05-01",
+        "2022-06-01",
+        calendar=calendar,
+        config=cfg,
+    )
+
+    assert history[pd.Timestamp("2022-05-01")] == ["LUNA-20190726"]
+    assert history[pd.Timestamp("2022-06-01")] == ["LUNA-20220528"]
+    assert "LUNA/USDT:USDT" not in {member for members in history.values() for member in members}
 
 
 def test_load_dollar_volume_panel_routes_calendar_sources(monkeypatch):
@@ -216,17 +258,18 @@ def test_load_dollar_volume_panel_routes_calendar_sources(monkeypatch):
     monkeypatch.setattr("data.fetcher.fetch_ohlcv", fake_fetch_ohlcv)
     calendar = pd.DataFrame(
         {
+            "symbol": ["FTT/USDT:USDT"],
             "data_source": ["binance_vision"],
             "binance_symbol": ["FTTUSDT"],
             "listing_date": [pd.Timestamp("2021-09-01", tz="UTC")],
             "delisting_date": [pd.Timestamp("2022-11-14", tz="UTC")],
         },
-        index=["FTT/USDT:USDT"],
+        index=["FTT-20210901"],
     )
     session = object()
 
     panel = load_dollar_volume_panel(
-        symbols=["FTT/USDT:USDT"],
+        symbols=["FTT-20210901"],
         since="2022-11-01",
         until="2022-11-01",
         calendar=calendar,
@@ -245,4 +288,89 @@ def test_load_dollar_volume_panel_routes_calendar_sources(monkeypatch):
             "timeframe": "1d",
         }
     ]
-    assert panel.loc[pd.Timestamp("2022-11-01", tz="UTC"), "FTT/USDT:USDT"] == 100.0
+    assert panel.loc[pd.Timestamp("2022-11-01", tz="UTC"), "FTT-20210901"] == 100.0
+
+
+def test_load_dollar_volume_panel_keeps_reused_symbol_generations_separate(monkeypatch):
+    calls = []
+    exchange = object()
+
+    def fake_fetch_ohlcv(
+        symbol,
+        timeframe,
+        since,
+        until,
+        exchange=None,
+        source="okx",
+        binance_symbol=None,
+        session=None,
+    ):
+        calls.append(
+            {
+                "symbol": symbol,
+                "source": source,
+                "binance_symbol": binance_symbol,
+                "exchange": exchange,
+            }
+        )
+        idx = pd.DatetimeIndex([pd.Timestamp("2022-06-01", tz="UTC")], name="datetime")
+        close = 1.0 if binance_symbol == "LUNAUSDT" else 10.0
+        return pd.DataFrame(
+            {
+                "open": [close],
+                "high": [close],
+                "low": [close],
+                "close": [close],
+                "volume": [100.0],
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr("data.fetcher.fetch_ohlcv", fake_fetch_ohlcv)
+    calendar = pd.DataFrame(
+        {
+            "symbol": ["LUNA/USDT:USDT", "LUNA/USDT:USDT"],
+            "data_source": ["binance_vision", "okx"],
+            "binance_symbol": ["LUNAUSDT", None],
+            "listing_date": [
+                pd.Timestamp("2019-07-26", tz="UTC"),
+                pd.Timestamp("2022-05-28", tz="UTC"),
+            ],
+            "delisting_date": [pd.Timestamp("2022-05-13", tz="UTC"), pd.NaT],
+        },
+        index=["LUNA-20190726", "LUNA-20220528"],
+    )
+
+    panel = load_dollar_volume_panel(
+        exchange=exchange,
+        since="2022-06-01",
+        until="2022-06-01",
+        calendar=calendar,
+    )
+
+    assert panel.columns.tolist() == ["LUNA-20190726", "LUNA-20220528"]
+    assert calls == [
+        {
+            "symbol": "LUNA/USDT:USDT",
+            "source": "binance_vision",
+            "binance_symbol": "LUNAUSDT",
+            "exchange": None,
+        },
+        {
+            "symbol": "LUNA/USDT:USDT",
+            "source": "okx",
+            "binance_symbol": None,
+            "exchange": exchange,
+        },
+    ]
+    assert panel.loc[pd.Timestamp("2022-06-01", tz="UTC"), "LUNA-20190726"] == 100.0
+    assert panel.loc[pd.Timestamp("2022-06-01", tz="UTC"), "LUNA-20220528"] == 1000.0
+
+    with pytest.raises(ValueError, match="多个 asset_id"):
+        load_dollar_volume_panel(
+            exchange=exchange,
+            symbols=["LUNA/USDT:USDT"],
+            since="2022-06-01",
+            until="2022-06-01",
+            calendar=calendar,
+        )
