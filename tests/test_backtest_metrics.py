@@ -13,6 +13,7 @@ from backtest.metrics import (
     max_drawdown,
     performance_summary,
     realized_beta,
+    realized_beta_by_regime,
     sharpe_ratio,
     win_rate,
 )
@@ -69,14 +70,29 @@ def test_realized_beta():
     assert realized_beta(strategy, benchmark) == pytest.approx(0.5)
 
 
+def test_realized_beta_by_regime_aligns_and_skips_missing_regime_days():
+    idx = pd.date_range("2024-01-01", periods=6, freq="D", tz="UTC")
+    benchmark = pd.Series([0.01, 0.02, 0.03, -0.01, -0.02, -0.03], index=idx)
+    strategy = pd.Series([0.005, 0.010, 9.999, 0.01, 0.02, 0.03], index=idx)
+    regime = pd.Series([0, 0, None, 1, 1, 1], index=idx)
+
+    betas = realized_beta_by_regime(strategy, benchmark, regime)
+
+    assert set(betas) == {0, 1}
+    assert betas[0] == pytest.approx(0.5)
+    assert betas[1] == pytest.approx(-1.0)
+
+
 def test_performance_summary_includes_ci_turnover_beta():
     returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.00])
     turnover = pd.Series([0.0, 1.0, 0.5, 0.2, 0.1])
     benchmark = pd.Series([0.01, 0.01, -0.02, 0.02, 0.00])
+    regime = pd.Series([0, 0, 1, 1, None])
     summary = performance_summary(
         returns,
         turnover=turnover,
         benchmark_returns=benchmark,
+        regime=regime,
         periods_per_year=5,
         n_bootstrap=100,
         seed=1,
@@ -87,6 +103,8 @@ def test_performance_summary_includes_ci_turnover_beta():
         "bootstrap_block_length",
         "avg_turnover",
         "realized_beta",
+        "beta_regime_0",
+        "beta_regime_1",
     ]:
         assert key in summary
     assert summary["bootstrap_block_length"] == pytest.approx(20.0)

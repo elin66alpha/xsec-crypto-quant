@@ -71,19 +71,19 @@
   - Locked holdout：2025-10-01 ~ 解锁日（今日约 8.4 个月，落在 6–12 个月区间；**holdout_start 固定不再移动**，解锁时以当日为 holdout_end 一次性冻结）
   - 落地：更新 `backtest/walkforward.py` 的 `SplitConfig` 默认值，提交信息引用本条。
 
-### 7. Walk-forward 只有"评估"没有"选参"管线
+### 7. `[x]` Walk-forward 只有"评估"没有"选参"管线（commit feat(backtest): add walk-forward parameter selection pipeline，codex-w2 实现）
 
 - **位置**：`backtest/overfitting_check.py` ＋ `notebooks/demo_phase5_backtest.py`（固定参数在各 validation 窗口算 Sharpe）。
 - **问题**：CLAUDE.md 承诺"动量窗口 N 等参数由 Walk-Forward 选"，需要每窗口 train→网格选参→该窗口 validation 评估的完整循环，目前没接起来。
 - **修复方案**：在 `backtest/walkforward.py` 或新模块实现 `run_walk_forward(grid, panels, windows)`：逐窗口在 train 段选参、在 validation 段出样本外收益，拼接成真正的 walk-forward 净值曲线；所有试过的组合数自动累计进 DSR 的 n_trials。
 
-### 8. DSR 的 n_trials 只数了阶段 5 网格，缺试错台账
+### 8. `[x]` DSR 的 n_trials 只数了阶段 5 网格，缺试错台账（commit feat(backtest): add trials ledger feeding DSR n_trials，codex-w2 实现）
 
 - **位置**：`backtest/overfitting_check.py`（`deflated_sharpe_report` 用参数网格大小做 n_trials）。
 - **问题**：阶段 2 试过的全部"因子×窗口×horizon"组合也是试错，不计入则 DSR 惩罚不足。
 - **修复方案**：建 `docs/trials_ledger.md`（或 json），从阶段 2 起累计记录每一批试验的组合数与日期；`deflated_sharpe_report` 的 n_trials 从台账读取总数。git 历史佐证台账完整性。
 
-### 9. 滑点假设对全池一刀切
+### 9. `[x]` 滑点假设对全池一刀切（commit feat(backtest): add cost stress test at 1x/2x/3x，codex-w2 实现）
 
 - **位置**：`backtest/xsec_runner.py`（`BacktestConfig.slippage = 0.0005` 统一 5bp）。
 - **问题**：池子第 25–30 名的小币滑点远高于 BTC/ETH；多空腿恰好系统性持有流动性较差的标的。
@@ -103,7 +103,7 @@
 - **位置**：`strategy/rebalance.py`（`apply_no_trade_band` 的 `held` 状态）。
 - **说明**：实际上价格变动会让权重漂移；日频下是二阶小量。先记录在案，待缓冲带（问题 5）落地后评估是否还需要建模漂移。
 
-### 12. 美元中性的实际 beta 需分 regime 监测
+### 12. `[x]` 美元中性的实际 beta 需分 regime 监测（commit feat(backtest): report realized beta per regime，codex-w2 实现）
 
 - **位置**：`backtest/metrics.py`（`realized_beta` 已有全样本版本）。
 - **说明**：横截面动量在加密里常系统性做空高 beta 山寨 → 持续负 beta 倾向，且危机时最伤。建议报告里按 regime 分段报 beta，而不只报全样本一个数。决策 7 本来就预留了"实测 beta 显著偏 0 再切 beta 中性"。

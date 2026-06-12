@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from backtest.xsec_runner import BacktestConfig, open_to_open_returns, run_backtest
+from backtest.xsec_runner import BacktestConfig, open_to_open_returns, run_backtest, run_cost_stress
 from regime.market_regime import REGIME_CRISIS, REGIME_LOW_VOL
 
 
@@ -137,3 +137,29 @@ def test_terminal_missing_forward_return_is_not_flagged():
         config=BacktestConfig(quantile=0.25, no_trade_band=0.0, taker_fee=0.0, slippage=0.0),
     )
     assert result.missing_return_exposure.sum() == pytest.approx(0.0)
+
+
+def test_cost_stress_sharpe_is_monotonic_non_increasing():
+    dates = _dates(8)
+    cols = ["A", "B", "C", "D"]
+    rows = []
+    for i in range(len(dates)):
+        rows.append([4.0, 3.0, 2.0, 1.0] if i % 2 == 0 else [1.0, 4.0, 3.0, 2.0])
+    score = pd.DataFrame(rows, index=dates, columns=cols)
+    prices = pd.DataFrame(100.0, index=dates, columns=cols)
+
+    stress = run_cost_stress(
+        score,
+        prices,
+        config=BacktestConfig(
+            quantile=0.25,
+            no_trade_band=0.0,
+            taker_fee=0.001,
+            slippage=0.001,
+        ),
+    )
+
+    assert list(stress.index) == [1.0, 2.0, 3.0]
+    assert {"annualized_return", "sharpe", "max_drawdown"} <= set(stress.columns)
+    assert stress.loc[2.0, "sharpe"] <= stress.loc[1.0, "sharpe"]
+    assert stress.loc[3.0, "sharpe"] <= stress.loc[2.0, "sharpe"]

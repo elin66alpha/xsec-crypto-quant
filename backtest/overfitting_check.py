@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .deflated_sharpe import DeflatedSharpeResult, deflated_sharpe_ratio
 from .metrics import TRADING_DAYS_CRYPTO, bootstrap_ci, sharpe_ratio
+from .trials import total_trials
 
 
 def expand_parameter_grid(grid: dict[str, Iterable[object]]) -> list[dict[str, object]]:
@@ -80,10 +82,13 @@ def deflated_sharpe_report(
     returns: pd.Series,
     parameter_grid: dict[str, Iterable[object]] | None = None,
     n_trials: int | None = None,
+    n_trials_from_ledger: str | Path | None = None,
     alpha: float = 0.05,
 ) -> DeflatedSharpeResult:
     """按参数试验次数生成 DSR 报告。"""
-    if n_trials is None:
+    if n_trials_from_ledger is not None:
+        n_trials = total_trials(n_trials_from_ledger)
+    elif n_trials is None:
         n_trials = len(expand_parameter_grid(parameter_grid or {}))
     return deflated_sharpe_ratio(returns, n_trials=max(1, n_trials), alpha=alpha)
 
