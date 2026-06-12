@@ -12,6 +12,7 @@ from data.storage import (
     save_ohlcv,
 )
 from data.validate import (
+    check_delisted_symbol_coverage,
     check_ohlcv_validity,
     check_required_historical_members,
     check_timestamp_continuity,
@@ -185,3 +186,28 @@ def test_universe_consistency_runs_required_historical_member_check():
 
     assert not rep.ok
     assert any("now-delisted" in e for e in rep.errors)
+
+
+def _delisted_calendar(symbol_count: int) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "symbol": [f"OLD{i}/USDT:USDT" for i in range(symbol_count)],
+            "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")] * symbol_count,
+            "delisting_date": [pd.Timestamp("2023-01-01", tz="UTC")] * symbol_count,
+        },
+        index=[f"OLD{i}-20200101" for i in range(symbol_count)],
+    )
+
+
+def test_delisted_symbol_coverage_detects_incomplete_archive_enumeration():
+    rep = check_delisted_symbol_coverage(_delisted_calendar(9), min_count=10)
+
+    assert not rep.ok
+    assert any("2021-06-01" in e and "9 < 10" in e for e in rep.errors)
+    assert any("2022-06-01" in e and "9 < 10" in e for e in rep.errors)
+
+
+def test_delisted_symbol_coverage_passes_when_key_dates_have_enough_delisted_symbols():
+    rep = check_delisted_symbol_coverage(_delisted_calendar(10), min_count=10)
+
+    assert rep.ok
