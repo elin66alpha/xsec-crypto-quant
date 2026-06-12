@@ -23,7 +23,7 @@ import re
 import time
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -109,7 +109,7 @@ def _parse_s3_xml(content: bytes) -> tuple[list[str], list[str], bool, str | Non
     is_truncated = (_find_text(root, "IsTruncated") or "false").lower() == "true"
     next_marker = _find_text(root, "NextMarker")
     if is_truncated and not next_marker:
-        next_marker = (common_prefixes or keys or [None])[-1]
+        next_marker = common_prefixes[-1] if common_prefixes else (keys[-1] if keys else None)
     return common_prefixes, keys, is_truncated, next_marker
 
 
@@ -162,13 +162,13 @@ def list_s3_keys(prefix: str, **kwargs) -> list[str]:
 
 
 def ms_to_date(value: str | int | None) -> str | None:
-    if value in (None, "", "0"):
+    if value is None or value == "" or value == "0" or value == 0:
         return None
     return datetime.fromtimestamp(int(value) / 1000, tz=UTC).date().isoformat()
 
 
-def _iso_date(value: str | None) -> datetime.date | None:
-    if value in (None, ""):
+def _iso_date(value: str | None) -> date | None:
+    if value is None or value == "":
         return None
     return datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -279,11 +279,11 @@ def enumerate_binance_vision_usdt_symbols(
     return sorted(symbol for symbol in symbols if is_usdt_perp_archive_symbol(symbol))
 
 
-def _month_start(month: str) -> datetime.date:
+def _month_start(month: str) -> date:
     return datetime.strptime(month, "%Y-%m").date()
 
 
-def _month_end(month: str) -> datetime.date:
+def _month_end(month: str) -> date:
     year, month_num = map(int, month.split("-"))
     return datetime(year, month_num, calendar.monthrange(year, month_num)[1]).date()
 
