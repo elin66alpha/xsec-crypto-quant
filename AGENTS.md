@@ -350,23 +350,10 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch: Phase 5 closeout implemented locally on `main`; planned tag
-  `v0.5-backtest`. Earlier tags: Phase 4 = `v0.4-strategy`, Phase 3 = `v0.3-regime`,
-  Phase 2 = `v0.2-factors`, Phase 1 = `v0.1-features`, Phase 0 = `v0.0-data`.
-- Working tree changes: Phase 5 backtest modules, their tests, one teaching demo, and this
-  handoff update.
-- Environment: Linux/Miniconda env `/home/pc/miniconda3/envs/xsec-crypto-quant`.
-- What changed: added `backtest/{xsec_runner,metrics,walkforward,deflated_sharpe,
-  overfitting_check}.py`, tests, and `notebooks/demo_phase5_backtest.py`.
-- Commands run: initial `pytest -q`, initial `ruff check .`, focused Phase 5 tests,
-  full `pytest -q`, full `ruff check .`, `mypy backtest strategy regime factors features
-  tests`, and executed the Phase 5 demo.
-- Test results: `pytest` 154 passed; `ruff` passed; `mypy` no issues (52 source/test files);
-  Phase 5 demo clean.
-- Pending decisions: real-data parameter choices (window N, quantile width, no-trade band,
-  FDR q, corr-spike thresholds) must be chosen out-of-sample from validation/walk-forward.
-  Fixed: HMM states = 3; equal-weight factor combination.
+- Last commit/branch: `df04c60` on `main`; planned tag `v0.5-backtest`.
+- Working tree state: Clean.
+- What changed: Resolved mypy type errors in the perpetual contract calendar script `scripts/build_okx_perp_calendar.py` and formatted imports.
+- Commands run: `pytest -q`, `ruff check .`, and `mypy` on all packages (`data`, `features`, `factors`, `regime`, `strategy`, `backtest`, `tests`).
+- Test results: `pytest` passed (154 tests); `ruff` passed; `mypy` passed with zero issues in 63 source files.
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Push status: confirm with the user before pushing `main` + `v0.5-backtest` to origin.
-- Next recommended step: run Phase 5 on real timestamp-correct OKX data; if validation and
-  locked holdout pass after `pre-holdout-freeze`, start Phase 6 paper trading in `live/`.
+- Next recommended step: run Phase 5 on real timestamp-correct OKX data; if validation and locked holdout pass after `pre-holdout-freeze`, start Phase 6 paper trading in `live/`.
