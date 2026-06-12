@@ -19,9 +19,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -33,6 +35,7 @@ DEFAULT_MIN_LISTING_DAYS = int(os.getenv("UNIVERSE_MIN_LISTING_DAYS", "90"))
 DEFAULT_LOOKBACK_DAYS = int(os.getenv("UNIVERSE_VOLUME_LOOKBACK_DAYS", "30"))
 # lookback 窗口内至少要有这么多个有效成交额日，才有资格参与排名（防止"上市一两天就刷量"入选）
 DEFAULT_MIN_VALID_DAYS_RATIO = 0.5
+DEFAULT_PERP_CALENDAR_PATH = Path(__file__).resolve().parents[1] / "metadata" / "okx_perp_calendar.json"
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,46 @@ def _align_tz(ts: pd.Timestamp, index: pd.Index) -> pd.Timestamp:
     return ts.tz_localize(None) if ts.tz is not None else ts
 
 
+def load_perp_calendar(path: str | Path = DEFAULT_PERP_CALENDAR_PATH) -> pd.DataFrame:
+    """读取 USDT 永续合约上市/退市日历。
+
+    日历用于修正仅从成交额面板推断上市日的幸存者偏差：历史回测应优先使用外部
+    listing/delisting 元数据，尤其是现在已退市、但在早年真实可交易的合约。退市日只
+    用来截断退市后的月份，不能在退市前作为选池信号。
+    """
+    with Path(path).open(encoding="utf-8") as fp:
+        payload = json.load(fp)
+
+    contracts = payload.get("contracts", payload)
+    calendar = pd.DataFrame(contracts)
+    if calendar.empty:
+        return calendar
+
+    required = {"symbol", "listing_date", "delisting_date", "data_source"}
+    missing = required.difference(calendar.columns)
+    if missing:
+        raise ValueError(f"永续合约日历缺少字段: {sorted(missing)}")
+
+    calendar["listing_date"] = pd.to_datetime(calendar["listing_date"], utc=True, errors="coerce")
+    calendar["delisting_date"] = pd.to_datetime(calendar["delisting_date"], utc=True, errors="coerce")
+    calendar = calendar.drop_duplicates(subset=["symbol"], keep="last").set_index("symbol").sort_index()
+    return calendar
+
+
+def calendar_listing_dates(calendar: pd.DataFrame) -> pd.Series:
+    """从合约日历提取上市日期 Series。"""
+    if "listing_date" not in calendar.columns:
+        raise ValueError("永续合约日历缺少 listing_date 字段")
+    return calendar["listing_date"].dropna()
+
+
+def calendar_delisting_dates(calendar: pd.DataFrame) -> pd.Series:
+    """从合约日历提取退市日期 Series。"""
+    if "delisting_date" not in calendar.columns:
+        raise ValueError("永续合约日历缺少 delisting_date 字段")
+    return calendar["delisting_date"].dropna()
+
+
 def infer_listing_dates(dollar_volume: pd.DataFrame) -> pd.Series:
     """由成交额面板推断每个标的的"上市日"代理 = 第一条有效（非 NaN）数据日。
 
@@ -84,6 +127,7 @@ def select_universe(
     dollar_volume: pd.DataFrame,
     as_of: pd.Timestamp,
     listing_dates: pd.Series | None = None,
+    delisting_dates: pd.Series | None = None,
     config: UniverseConfig | None = None,
 ) -> list[str]:
     """选出 ``as_of`` 时点（收盘后）真实可交易的 Top N 标的。
@@ -98,6 +142,9 @@ def select_universe(
         判定时点（含当日）。
     listing_dates : Series, optional
         每个标的的上市日；缺省则由 ``dollar_volume`` 推断。
+    delisting_dates : Series, optional
+        每个标的的退市日；``as_of`` 晚于退市日时剔除。退市日不能参与排序，只用于
+        防止退市后继续出现在动态池中。
     config : UniverseConfig, optional
 
     Returns
@@ -127,8 +174,15 @@ def select_universe(
         listed = listing_dates.get(symbol)
         if pd.isna(listed):
             continue
-        if (as_of - pd.Timestamp(listed)).days < config.min_listing_days:
+        listed_ts = _align_tz(pd.Timestamp(listed), dollar_volume.index)
+        if (as_of - listed_ts).days < config.min_listing_days:
             continue
+        if delisting_dates is not None:
+            delisted = delisting_dates.get(symbol)
+            if pd.notna(delisted):
+                delisted_ts = _align_tz(pd.Timestamp(delisted), dollar_volume.index)
+                if as_of > delisted_ts:
+                    continue
         # 3) 窗口内有足够有效成交额天数
         col = window[symbol].dropna()
         if len(col) < min_valid_days:
@@ -154,6 +208,8 @@ def build_universe_history(
     start: pd.Timestamp,
     end: pd.Timestamp,
     listing_dates: pd.Series | None = None,
+    delisting_dates: pd.Series | None = None,
+    calendar: pd.DataFrame | None = None,
     config: UniverseConfig | None = None,
 ) -> dict[pd.Timestamp, list[str]]:
     """逐月构建动态池：返回 {月初日期 -> 当月可交易成分列表}。
@@ -162,12 +218,15 @@ def build_universe_history(
     与日频持仓再平衡是两个层面：池是月度的，持仓是日度的）。
     """
     config = config or UniverseConfig()
+    if calendar is not None:
+        listing_dates = calendar_listing_dates(calendar)
+        delisting_dates = calendar_delisting_dates(calendar)
     if listing_dates is None:
         listing_dates = infer_listing_dates(dollar_volume)
 
     history: dict[pd.Timestamp, list[str]] = {}
     for month_start in month_start_dates(start, end):
-        members = select_universe(dollar_volume, month_start, listing_dates, config)
+        members = select_universe(dollar_volume, month_start, listing_dates, delisting_dates, config)
         history[month_start] = members
         logger.debug("universe {} -> {} 个标的", month_start.date(), len(members))
     return history
