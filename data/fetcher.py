@@ -14,6 +14,7 @@ import csv
 import io
 import time
 import zipfile
+from collections.abc import Iterable
 
 import pandas as pd
 import requests
@@ -25,6 +26,8 @@ OHLCV_PAGE_LIMIT = 100
 FUNDING_PAGE_LIMIT = 100
 MAX_EMPTY_PAGES = 2  # 连续空页则停止，避免死循环
 BINANCE_VISION_BASE_URL = "https://data.binance.vision/data/futures/um/daily/klines"
+BINANCE_VISION_MONTHLY_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
+BINANCE_VISION_RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
 def make_okx_perp(exchange=None):
@@ -73,6 +76,22 @@ def _binance_vision_daily_url(symbol: str, timeframe: str, day: pd.Timestamp) ->
     return f"{BINANCE_VISION_BASE_URL}/{symbol}/{timeframe}/{symbol}-{timeframe}-{day_str}.zip"
 
 
+def _binance_vision_monthly_url(symbol: str, timeframe: str, month: pd.Timestamp) -> str:
+    month_str = month.strftime("%Y-%m")
+    return (
+        f"{BINANCE_VISION_MONTHLY_BASE_URL}/{symbol}/{timeframe}/"
+        f"{symbol}-{timeframe}-{month_str}.zip"
+    )
+
+
+def _month_end(day: pd.Timestamp) -> pd.Timestamp:
+    return (day + pd.offsets.MonthEnd(0)).normalize()
+
+
+def _iter_days(start_day: pd.Timestamp, end_day: pd.Timestamp) -> Iterable[pd.Timestamp]:
+    yield from pd.date_range(start_day, end_day, freq="D", tz="UTC")
+
+
 def _parse_binance_vision_zip(content: bytes) -> list[list[float | int]]:
     """解析 Binance Vision 日线 zip，兼容有/无 CSV 表头的文件。"""
     rows: list[list[float | int]] = []
@@ -97,18 +116,74 @@ def _parse_binance_vision_zip(content: bytes) -> list[list[float | int]]:
     return rows
 
 
+def _get_with_retries(
+    client,
+    url: str,
+    *,
+    timeout: int = 30,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
+):
+    """GET with simple exponential backoff for Binance Vision transient errors."""
+    last_response = None
+    for attempt in range(max_retries + 1):
+        response = client.get(url, timeout=timeout)
+        last_response = response
+        if response.status_code not in BINANCE_VISION_RETRY_STATUS:
+            return response
+        if attempt < max_retries:
+            sleep_for = backoff_seconds * (2 ** attempt)
+            logger.warning(
+                "Binance Vision transient HTTP {} for {}; retrying in {:.1f}s",
+                response.status_code,
+                url,
+                sleep_for,
+            )
+            time.sleep(sleep_for)
+    return last_response
+
+
+def _fetch_binance_daily_rows(
+    client,
+    symbol: str,
+    timeframe: str,
+    start_day: pd.Timestamp,
+    end_day: pd.Timestamp,
+    *,
+    max_retries: int,
+    backoff_seconds: float,
+) -> list[list[float | int]]:
+    rows: list[list[float | int]] = []
+    for day in _iter_days(start_day, end_day):
+        url = _binance_vision_daily_url(symbol, timeframe, day)
+        response = _get_with_retries(
+            client,
+            url,
+            max_retries=max_retries,
+            backoff_seconds=backoff_seconds,
+        )
+        if response.status_code == 404:
+            continue
+        response.raise_for_status()
+        rows.extend(_parse_binance_vision_zip(response.content))
+    return rows
+
+
 def fetch_binance_vision_ohlcv(
     symbol: str,
     timeframe: str = "1d",
     since=None,
     until=None,
     session=None,
+    use_monthly_archives: bool = True,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
 ) -> pd.DataFrame:
     """从 Binance Vision USDT-M daily klines 归档拉取退市合约 OHLCV。
 
-    这是 OKX 退市合约缺失历史 K 线时的显式 fallback。归档按自然日 zip 文件组织，
-    因此当前实现只支持有界的 ``1d`` 请求；调用方必须提供 ``since``，避免无意中
-    扫描全部历史。返回列与 OKX ``fetch_ohlcv`` 保持一致。
+    这是 OKX 退市合约缺失历史 K 线时的显式 fallback。完整自然月优先走
+    monthly zip，首尾不完整月份与 monthly 404 月份回退 daily zip；调用方必须
+    提供 ``since``，避免无意中扫描全部历史。返回列与 OKX ``fetch_ohlcv`` 保持一致。
     """
     if timeframe != "1d":
         raise ValueError("Binance Vision fallback 当前只支持 1d 日线")
@@ -122,15 +197,52 @@ def fetch_binance_vision_ohlcv(
         return _empty_ohlcv()
 
     binance_symbol = to_binance_usdt_symbol(symbol)
-    client = session or requests
+    client = session or requests.Session()
     rows: list[list[float | int]] = []
-    for day in pd.date_range(start_day, end_day, freq="D", tz="UTC"):
-        url = _binance_vision_daily_url(binance_symbol, timeframe, day)
-        response = client.get(url, timeout=30)
-        if response.status_code == 404:
+    day = start_day
+    one_day = pd.Timedelta(days=1)
+    while day <= end_day:
+        month_start = day.replace(day=1)
+        month_end = _month_end(day)
+        is_complete_month = day == month_start and month_end <= end_day
+        if use_monthly_archives and is_complete_month:
+            monthly_url = _binance_vision_monthly_url(binance_symbol, timeframe, day)
+            monthly_response = _get_with_retries(
+                client,
+                monthly_url,
+                max_retries=max_retries,
+                backoff_seconds=backoff_seconds,
+            )
+            if monthly_response.status_code == 404:
+                rows.extend(
+                    _fetch_binance_daily_rows(
+                        client,
+                        binance_symbol,
+                        timeframe,
+                        day,
+                        month_end,
+                        max_retries=max_retries,
+                        backoff_seconds=backoff_seconds,
+                    )
+                )
+            else:
+                monthly_response.raise_for_status()
+                rows.extend(_parse_binance_vision_zip(monthly_response.content))
+            day = month_end + one_day
             continue
-        response.raise_for_status()
-        rows.extend(_parse_binance_vision_zip(response.content))
+
+        rows.extend(
+            _fetch_binance_daily_rows(
+                client,
+                binance_symbol,
+                timeframe,
+                day,
+                day,
+                max_retries=max_retries,
+                backoff_seconds=backoff_seconds,
+            )
+        )
+        day += one_day
 
     if not rows:
         logger.warning("fetch_binance_vision_ohlcv: {} 无数据 (since={}, until={})", symbol, since, until)
