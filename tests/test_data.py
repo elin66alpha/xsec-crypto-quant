@@ -13,6 +13,7 @@ from data.storage import (
 )
 from data.validate import (
     check_ohlcv_validity,
+    check_required_historical_members,
     check_timestamp_continuity,
     check_universe_consistency,
     validate_ohlcv,
@@ -112,3 +113,75 @@ def test_universe_consistency_detects_lookahead():
     rep = check_universe_consistency(hist, listing, min_listing_days=90)
     assert not rep.ok
     assert any("FUTURE" in e for e in rep.errors)
+
+
+def test_universe_consistency_detects_post_delisting_members():
+    listing = pd.Series({"FTT-20220501": pd.Timestamp("2022-05-01", tz="UTC")})
+    delisting = pd.Series({"FTT-20220501": pd.Timestamp("2022-11-14", tz="UTC")})
+    hist = {pd.Timestamp("2022-12-01", tz="UTC"): ["FTT-20220501"]}
+
+    rep = check_universe_consistency(
+        hist,
+        listing,
+        min_listing_days=90,
+        delisting_dates=delisting,
+    )
+
+    assert not rep.ok
+    assert any("退市后仍入池" in e for e in rep.errors)
+
+
+def test_required_historical_members_detects_missing_delisted_representatives():
+    hist = {
+        pd.Timestamp("2021-01-01", tz="UTC"): ["BTC", "ETH"],
+        pd.Timestamp("2022-01-01", tz="UTC"): ["BTC", "SOL"],
+    }
+
+    rep = check_required_historical_members(
+        hist,
+        {"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
+        start=pd.Timestamp("2021-01-01", tz="UTC"),
+        end=pd.Timestamp("2022-12-01", tz="UTC"),
+    )
+
+    assert not rep.ok
+    assert any("疑似幸存者偏差" in e for e in rep.errors)
+
+
+def test_required_historical_members_passes_when_delisted_representative_present():
+    hist = {
+        pd.Timestamp("2021-01-01", tz="UTC"): ["BTC", "ETH"],
+        pd.Timestamp("2022-01-01", tz="UTC"): ["BTC", "FTT-20220501"],
+    }
+
+    rep = check_required_historical_members(
+        hist,
+        {"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
+        start=pd.Timestamp("2021-01-01", tz="UTC"),
+        end=pd.Timestamp("2022-12-01", tz="UTC"),
+    )
+
+    assert rep.ok
+
+
+def test_universe_consistency_runs_required_historical_member_check():
+    listing = pd.Series({
+        "BTC": pd.Timestamp("2020-01-01", tz="UTC"),
+        "ETH": pd.Timestamp("2020-01-01", tz="UTC"),
+    })
+    hist = {
+        pd.Timestamp("2021-01-01", tz="UTC"): ["BTC"],
+        pd.Timestamp("2022-01-01", tz="UTC"): ["ETH"],
+    }
+
+    rep = check_universe_consistency(
+        hist,
+        listing,
+        min_listing_days=0,
+        required_presence_symbols={"LUNA-20190726", "FTT-20220501", "SRM-20210101", "ANC-20220401"},
+        required_presence_start=pd.Timestamp("2021-01-01", tz="UTC"),
+        required_presence_end=pd.Timestamp("2022-12-01", tz="UTC"),
+    )
+
+    assert not rep.ok
+    assert any("now-delisted" in e for e in rep.errors)
