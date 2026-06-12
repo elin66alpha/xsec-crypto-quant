@@ -189,6 +189,44 @@ def check_required_historical_members(
     return rep
 
 
+def check_delisted_symbol_coverage(
+    calendar: pd.DataFrame,
+    as_of_dates: tuple[pd.Timestamp, ...] = (
+        pd.Timestamp("2021-06-01"),
+        pd.Timestamp("2022-06-01"),
+    ),
+    min_count: int = 10,
+) -> ValidationReport:
+    """检查关键历史时点是否含有足够多现已退市的可交易 symbol。
+
+    这是对退市合约枚举是否“全量化”的闸门。若 2021-06 或 2022-06 的可交易集合里
+    现已退市 symbol 少于阈值，通常说明日历仍只是象征性样本，会继续保留幸存者偏差。
+    """
+    rep = ValidationReport()
+    required = {"symbol", "listing_date", "delisting_date"}
+    missing = required.difference(calendar.columns)
+    if missing:
+        rep.add_error(f"退市覆盖检查缺少日历字段：{sorted(missing)}")
+        return rep
+    if min_count < 1:
+        raise ValueError("min_count 必须 >= 1")
+
+    listing = pd.to_datetime(calendar["listing_date"], utc=True, errors="coerce")
+    delisting = pd.to_datetime(calendar["delisting_date"], utc=True, errors="coerce")
+    now_delisted = delisting.notna()
+    for as_of in as_of_dates:
+        ts = pd.Timestamp(as_of)
+        ts = ts.tz_localize("UTC") if ts.tz is None else ts.tz_convert("UTC")
+        tradable = listing.notna() & (listing <= ts) & now_delisted & (delisting >= ts)
+        count = int(calendar.loc[tradable, "symbol"].nunique())
+        if count < min_count:
+            rep.add_error(
+                f"{ts.date()}: 可交易且现已退市 symbol 数量 {count} < {min_count}，"
+                "退市合约枚举疑似不完整"
+            )
+    return rep
+
+
 def check_universe_consistency(
     universe_history: dict[pd.Timestamp, list[str]],
     listing_dates: pd.Series,
