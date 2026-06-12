@@ -13,6 +13,7 @@ from data.universe import (
     calendar_delisting_dates,
     calendar_listing_dates,
     infer_listing_dates,
+    load_dollar_volume_panel,
     load_perp_calendar,
     select_universe,
 )
@@ -173,3 +174,75 @@ def test_build_universe_history_uses_calendar_delisting_dates():
 
     assert history[pd.Timestamp("2023-04-01")] == ["DEAD", "LIVE"]
     assert history[pd.Timestamp("2023-05-01")] == ["LIVE"]
+
+
+def test_load_dollar_volume_panel_routes_calendar_sources(monkeypatch):
+    calls = []
+
+    def fake_fetch_ohlcv(
+        symbol,
+        timeframe,
+        since,
+        until,
+        exchange=None,
+        source="okx",
+        binance_symbol=None,
+        session=None,
+    ):
+        calls.append(
+            {
+                "symbol": symbol,
+                "source": source,
+                "binance_symbol": binance_symbol,
+                "exchange": exchange,
+                "session": session,
+                "since": since,
+                "until": until,
+                "timeframe": timeframe,
+            }
+        )
+        idx = pd.DatetimeIndex([pd.Timestamp("2022-11-01", tz="UTC")], name="datetime")
+        return pd.DataFrame(
+            {
+                "open": [1.0],
+                "high": [2.0],
+                "low": [0.5],
+                "close": [2.0],
+                "volume": [50.0],
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr("data.fetcher.fetch_ohlcv", fake_fetch_ohlcv)
+    calendar = pd.DataFrame(
+        {
+            "data_source": ["binance_vision"],
+            "binance_symbol": ["FTTUSDT"],
+            "listing_date": [pd.Timestamp("2021-09-01", tz="UTC")],
+            "delisting_date": [pd.Timestamp("2022-11-14", tz="UTC")],
+        },
+        index=["FTT/USDT:USDT"],
+    )
+    session = object()
+
+    panel = load_dollar_volume_panel(
+        symbols=["FTT/USDT:USDT"],
+        since="2022-11-01",
+        until="2022-11-01",
+        calendar=calendar,
+        fetch_session=session,
+    )
+
+    assert calls == [
+        {
+            "symbol": "FTT/USDT:USDT",
+            "source": "binance_vision",
+            "binance_symbol": "FTTUSDT",
+            "exchange": None,
+            "session": session,
+            "since": "2022-11-01",
+            "until": "2022-11-01",
+            "timeframe": "1d",
+        }
+    ]
+    assert panel.loc[pd.Timestamp("2022-11-01", tz="UTC"), "FTT/USDT:USDT"] == 100.0

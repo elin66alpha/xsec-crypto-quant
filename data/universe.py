@@ -271,22 +271,53 @@ def load_dollar_volume_panel(
     symbols: list[str] | None = None,
     since: pd.Timestamp | None = None,
     until: pd.Timestamp | None = None,
+    calendar: pd.DataFrame | None = None,
+    fetch_session=None,
 ) -> pd.DataFrame:
     """拉取各标的日线，构造美元成交额宽表（index=日期, columns=symbol）。
 
     复用 ``data/fetcher.py`` 的分页拉取（OKX 单次最多 100 根，必须分页）。
+    若传入合约日历，则按 ``data_source`` 对已退市合约走 Binance Vision fallback。
     dollar_volume ≈ close × base_volume（审计说明①）。
     """
     from .fetcher import fetch_ohlcv  # 局部导入，避免纯逻辑路径牵入 fetcher
 
-    exchange = _make_okx_perp(exchange)
     if symbols is None:
-        symbols = list_perpetual_symbols(exchange)
+        if calendar is not None:
+            symbols = list(calendar.index)
+        else:
+            exchange = _make_okx_perp(exchange)
+            symbols = list_perpetual_symbols(exchange)
+
+    source_map: dict[str, tuple[str, str | None]] = {}
+    for symbol in symbols:
+        source = "okx"
+        binance_symbol = None
+        if calendar is not None and symbol in calendar.index:
+            source_value = calendar.loc[symbol].get("data_source", "okx")
+            source = "okx" if pd.isna(source_value) else str(source_value)
+            binance_value = calendar.loc[symbol].get("binance_symbol")
+            if pd.notna(binance_value):
+                binance_symbol = str(binance_value)
+        source_map[symbol] = (source, binance_symbol)
+
+    if any(source == "okx" for source, _ in source_map.values()):
+        exchange = _make_okx_perp(exchange)
 
     series_map: dict[str, pd.Series] = {}
     for symbol in symbols:
+        source, binance_symbol = source_map[symbol]
         try:
-            df = fetch_ohlcv(symbol, timeframe="1d", since=since, until=until, exchange=exchange)
+            df = fetch_ohlcv(
+                symbol,
+                timeframe="1d",
+                since=since,
+                until=until,
+                exchange=exchange if source == "okx" else None,
+                source=source,
+                binance_symbol=binance_symbol,
+                session=fetch_session,
+            )
         except Exception as exc:  # noqa: BLE001 — 单标的失败不应中断整体
             logger.warning("拉取 {} 失败：{}", symbol, exc)
             continue
