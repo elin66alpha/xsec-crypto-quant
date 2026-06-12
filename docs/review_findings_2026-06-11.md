@@ -83,7 +83,7 @@
 - **问题**：阶段 2 试过的全部"因子×窗口×horizon"组合也是试错，不计入则 DSR 惩罚不足。
 - **修复方案**：建 `docs/trials_ledger.md`（或 json），从阶段 2 起累计记录每一批试验的组合数与日期；`deflated_sharpe_report` 的 n_trials 从台账读取总数。git 历史佐证台账完整性。
 
-### 9. 滑点假设对全池一刀切
+### 9. `[x]` 滑点假设对全池一刀切（commit feat(backtest): add cost stress test at 1x/2x/3x，codex-w2 实现）
 
 - **位置**：`backtest/xsec_runner.py`（`BacktestConfig.slippage = 0.0005` 统一 5bp）。
 - **问题**：池子第 25–30 名的小币滑点远高于 BTC/ETH；多空腿恰好系统性持有流动性较差的标的。

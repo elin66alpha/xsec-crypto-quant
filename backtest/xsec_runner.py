@@ -14,13 +14,15 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 import pandas as pd
 
 from strategy.portfolio import DEFAULT_QUANTILE, apply_regime_leverage, build_target_weights
 from strategy.rebalance import DEFAULT_NO_TRADE_BAND, apply_no_trade_band, to_execution, turnover
+
+from .metrics import annualized_return, max_drawdown, sharpe_ratio
 
 
 @dataclass(frozen=True)
@@ -201,3 +203,46 @@ def run_backtest(
         turnover=trade_turnover,
         missing_return_exposure=missing_return_exposure,
     )
+
+
+def run_cost_stress(
+    score: pd.DataFrame,
+    open_prices: pd.DataFrame,
+    funding_rates: pd.DataFrame | None = None,
+    regime: pd.Series | None = None,
+    corr_spike: pd.Series | None = None,
+    multipliers: tuple[float, ...] = (1.0, 2.0, 3.0),
+    config: BacktestConfig | None = None,
+) -> pd.DataFrame:
+    """Run the same backtest under fee/slippage stress multipliers.
+
+    Both ``taker_fee`` and ``slippage`` are multiplied by each stress value. Funding is
+    left unchanged because it is a market cashflow, not an execution-cost assumption.
+    """
+    base_config = config or BacktestConfig()
+    rows: list[dict[str, float]] = []
+    for multiplier in multipliers:
+        if multiplier <= 0:
+            raise ValueError("cost multipliers must be positive")
+        stressed_config = replace(
+            base_config,
+            taker_fee=base_config.taker_fee * multiplier,
+            slippage=base_config.slippage * multiplier,
+        )
+        result = run_backtest(
+            score,
+            open_prices,
+            funding_rates=funding_rates,
+            regime=regime,
+            corr_spike=corr_spike,
+            config=stressed_config,
+        )
+        rows.append(
+            {
+                "cost_multiplier": float(multiplier),
+                "annualized_return": annualized_return(result.net_return),
+                "sharpe": sharpe_ratio(result.net_return),
+                "max_drawdown": max_drawdown(result.net_return),
+            }
+        )
+    return pd.DataFrame(rows).set_index("cost_multiplier")
