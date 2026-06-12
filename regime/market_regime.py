@@ -170,8 +170,9 @@ def label_regimes_expanding(
     """诚实默认：扩展窗口重拟合 → 无前视的 regime 标注（可用于回测）。
 
     流程：前 ``min_train`` 行无模型 → NaN;此后每 ``refit_every`` 步,用"截至该块起点"的
-    历史重拟合 HMM,并**仅用训练段**确定波动率排序映射,再预测该块的状态。fitting 与
-    排序映射都不使用未来数据。
+    历史重拟合 HMM,并**仅用训练段**确定波动率排序映射。预测时把截至块尾的历史
+    ``X.iloc[:end]`` 一起送入 Viterbi,再只取当前 ``[start:end)`` 块的标签,避免块首
+    状态缺少历史条件。fitting 与排序映射都不使用未来数据。
 
     注：块内用 Viterbi,块内标签依赖该块观测;若要严格逐点因果,把 ``refit_every`` 设为 1
     （更慢）。本项目主要防的是"全序列拟合后回用状态",扩展窗口已杜绝该前视。
@@ -186,7 +187,8 @@ def label_regimes_expanding(
         model = fit_hmm(train, n_states=n_states, random_state=random_state)
         train_raw = model.predict(train.to_numpy())
         mapping = _vol_order_mapping(train_raw, train[vol_col].to_numpy(), n_states)
-        block_raw = model.predict(X.iloc[start:end].to_numpy())
+        full_raw = model.predict(X.iloc[:end].to_numpy())
+        block_raw = full_raw[start:end]
         labels.iloc[start:end] = [float(mapping.get(s, np.nan)) for s in block_raw]
         start = end
     return labels
