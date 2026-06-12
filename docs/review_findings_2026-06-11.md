@@ -54,7 +54,7 @@
 
 ## P1 —— 影响结论质量或换手成本，阶段 5 真跑之前修
 
-### 5. 无操作带对分位组合基本无效，应换成排名缓冲带（hysteresis）
+### 5. `[x]` 无操作带对分位组合基本无效，应换成排名缓冲带（commit 41ccfb3：build_target_weights 增加 exit_quantile；入选 20%/退出 30% 实测日均换手降 31%。exit_quantile 取值进入阶段 5 参数台账）
 
 - **位置**：`strategy/rebalance.py`（band=0.05 作用于权重变化）＋ `strategy/portfolio.py`（权重只有 ±1/n_side 或 0 两种取值）。
 - **问题**：quantile=0.2、池 30 只 → 每边 6 只，标的进出档位时 |Δw| = 1/6 ≈ 0.167 ≫ 0.05，band 拦不住；不进不出时 Δw=0，band 没事干。它只在每边只数变化引起的微调（1/6→1/7 ≈ 0.024）时生效。决策 4b 想抑制的"分位边界来回横跳"完全没被抑制。
@@ -93,7 +93,7 @@
 
 ## P2 —— 改进项，不阻塞主线
 
-### 10. Regime 分块 Viterbi 块首缺历史条件
+### 10. `[x]` Regime 分块 Viterbi 块首缺历史条件（commit 1099a76：predict 输入截至块尾的全部历史、只取当前块标签，仍无前视）
 
 - **位置**：`regime/market_regime.py`（`label_regimes_expanding` 对每个 21 天块孤立跑 `model.predict`）。
 - **修复方案**：改为 `model.predict(X.iloc[:end])` 后只取最后一块标签——仍无前视，条件更充分，几乎零成本。
