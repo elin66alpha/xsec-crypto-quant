@@ -46,6 +46,26 @@ def test_bootstrap_and_dsr_report():
     assert dsr.n_trials == 4
 
 
+def test_dsr_report_can_read_trial_count_from_ledger(tmp_path):
+    ledger = tmp_path / "trials.md"
+    ledger.write_text(
+        "| date | batch | n_combos | note |\n"
+        "|---|---|---:|---|\n"
+        "| 2026-06-11 | phase2 | 8 | factors |\n"
+        "| 2026-06-11 | phase5 | 12 | params |\n",
+        encoding="utf-8",
+    )
+    returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.00, 0.01])
+
+    dsr = deflated_sharpe_report(
+        returns,
+        parameter_grid={"ignored": [1]},
+        n_trials_from_ledger=ledger,
+    )
+
+    assert dsr.n_trials == 20
+
+
 def test_walk_forward_summary():
     results = pd.DataFrame({"sharpe": [1.0, -0.5, 0.25]})
     summary = walk_forward_summary(results, "sharpe")

@@ -77,7 +77,7 @@
 - **问题**：CLAUDE.md 承诺"动量窗口 N 等参数由 Walk-Forward 选"，需要每窗口 train→网格选参→该窗口 validation 评估的完整循环，目前没接起来。
 - **修复方案**：在 `backtest/walkforward.py` 或新模块实现 `run_walk_forward(grid, panels, windows)`：逐窗口在 train 段选参、在 validation 段出样本外收益，拼接成真正的 walk-forward 净值曲线；所有试过的组合数自动累计进 DSR 的 n_trials。
 
-### 8. DSR 的 n_trials 只数了阶段 5 网格，缺试错台账
+### 8. `[x]` DSR 的 n_trials 只数了阶段 5 网格，缺试错台账（commit feat(backtest): add trials ledger feeding DSR n_trials，codex-w2 实现）
 
 - **位置**：`backtest/overfitting_check.py`（`deflated_sharpe_report` 用参数网格大小做 n_trials）。
 - **问题**：阶段 2 试过的全部"因子×窗口×horizon"组合也是试错，不计入则 DSR 惩罚不足。
