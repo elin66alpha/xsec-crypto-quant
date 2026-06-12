@@ -43,8 +43,23 @@ Phase 0 is now closed out in the working tree:
   - `notebooks/01_data_fetch_storage_validate.ipynb`
   - `notebooks/02_dynamic_universe_evolution.ipynb`
 - Done: README/CLAUDE environment and exchange references reconciled to Python 3.12 and OKX.
-- Not done: Phase 1+ implementation. `features/`, `factors/`, `regime/`,
-  `strategy/`, `backtest/`, and `live/` currently contain only `__init__.py`.
+
+Phase 1 (cross-sectional feature engineering) is now complete in `features/`:
+
+- Done: `features/preprocess.py` — cross-sectional rank normalization (decision 5/11),
+  raw factor in → per-day rank out; NaN excluded; optional centering for dollar-neutral.
+- Done: `features/cross_sectional.py` — `momentum`, `realized_volatility`, `volume_change`
+  raw factors, parameterized by `window`; `CANDIDATE_WINDOWS = (7,14,30,60,90)`.
+- Done: `features/carry.py` — funding carry (decision 3): `to_daily_funding` (8h→daily)
+  then `funding_carry` rolling mean.
+- Done: `features/orderflow.py` — CVD / Trade Delta, **confirmation-only, never historical
+  backtest** (audit downgraded trades to record-from-now-only; L2 deleted entirely).
+- Done: tests `tests/test_features.py`, `tests/test_cross_sectional.py`,
+  `tests/test_carry.py`, `tests/test_orderflow.py` (50 tests total with Phase 0).
+- Done: teaching demos `notebooks/demo_phase1_cross_sectional.py` (rank concept) and
+  `notebooks/demo_phase1_all_factors.py` (all factors + perf check).
+- Not done: Phase 2+ implementation. `factors/`, `regime/`, `strategy/`, `backtest/`,
+  and `live/` currently contain only `__init__.py`.
 
 ## Verification Status
 
@@ -77,6 +92,16 @@ Results:
 - Both Phase 0 notebooks executed successfully.
 - OKX public-data smoke path worked for BTC OHLCV/funding, validation, parquet save, and load.
 - Small OKX dynamic-universe demo worked on BTC/ETH/SOL/XRP/DOGE with Top 3 selection.
+
+Phase 1 verification (this session ran on Windows 11, no conda available):
+
+- Verified through a gitignored `.venv` at the repo root, created with
+  `python -m venv .venv --system-site-packages` (reuses system pandas/numpy/scipy) plus
+  `pip install loguru pytest ruff mypy pyarrow`. Run e.g.
+  `& .\.venv\Scripts\python.exe -m pytest -q`.
+- `pytest`: 50 passed. `ruff check`: passed. `mypy features`: no issues found.
+- Both Phase 1 demos run clean to completion; perf acceptance (single-day all-factor
+  compute) measured ~0.03 ms, well under the 5 s bar.
 
 For future sessions:
 
@@ -121,6 +146,12 @@ These are project invariants, not suggestions:
 - `notebooks/02_dynamic_universe_evolution.ipynb`: recent dynamic-universe demo.
 - `tests/test_universe.py`: offline dynamic-universe tests.
 - `tests/test_data.py`: offline storage and validation tests.
+- `features/preprocess.py`: cross-sectional rank normalization (decision 5/11).
+- `features/cross_sectional.py`: momentum / realized-vol / volume-change raw factors.
+- `features/carry.py`: funding carry factor (8h→daily aggregation + rolling mean).
+- `features/orderflow.py`: CVD / Trade Delta, confirmation-only, not for historical backtest.
+- `tests/test_features.py` / `test_cross_sectional.py` / `test_carry.py` / `test_orderflow.py`: Phase 1 offline tests.
+- `notebooks/demo_phase1_cross_sectional.py` / `demo_phase1_all_factors.py`: Phase 1 teaching demos.
 
 ## Next Agent Checklist
 
@@ -132,13 +163,19 @@ These are project invariants, not suggestions:
 
 ## Immediate Next Work
 
-Recommended next step after Phase 0:
+Recommended next step after Phase 1 (Phase 2: cross-sectional factor analysis):
 
-1. Begin Phase 1 with `features/preprocess.py` and rank normalization tests before
-   adding factor-specific modules.
-2. Then add `features/cross_sectional.py` for momentum, volatility, and volume-change factors.
-3. Keep `features/carry.py` separate because funding is both a factor and a PnL component.
-4. Do not claim early-year unbiased results until a delisted-contract calendar is added.
+1. Begin Phase 2 in `factors/`: cross-sectional IC/ICIR via alphalens-reloaded against
+   `forward_return` at 1D/3D/5D/10D horizons. Factors consume `features/` raw outputs
+   ranked via `features.preprocess.cross_sectional_rank`.
+2. Add `factors/multiple_testing.py` (Benjamini-Hochberg FDR) BEFORE claiming any factor
+   is significant — N factors × 4 horizons will produce false positives uncorrected.
+3. Add `factors/quantile_backtest.py` (5-layer Q1→Q5 monotonicity) and
+   `factors/correlation.py` (drop >0.7-correlated, keep higher ICIR; final pool ≤ 10).
+4. Window N stays parameterized (`CANDIDATE_WINDOWS = 7/14/30/60/90`). Do NOT pick the
+   best N on full data — that is deferred to Phase 5 walk-forward.
+5. orderflow CVD/delta is confirmation-only; do not feed it into historical IC claims.
+6. Do not claim early-year unbiased results until a delisted-contract calendar is added.
 
 ## Handoff Protocol
 
@@ -161,10 +198,17 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch before closeout: `ba760f4` on `main` and `phase-0-data`.
-- Working tree changes: Phase 0 closeout docs, notebooks, lint fixes, and this handoff update.
-- Dependency work: upgraded Miniconda env `xsec-crypto-quant` to Python 3.12.13 and installed `.[dev]`.
-- Commands run: dependency resolution, OKX smoke fetch, `pytest`, `ruff`, `mypy`, and executed both notebooks.
-- Test results: `pytest` 15 passed; `ruff` all checks passed; `mypy data tests` no issues; notebooks executed successfully.
+- Last commit/branch: Phase 1 closeout merged into `main`, tag `v0.1-features`; work was
+  done on branch `phase-1-features`.
+- Working tree changes: Phase 1 feature modules, their tests, two teaching demos, and this
+  handoff update.
+- Environment: this session ran on Windows 11 with no conda. Verified via a gitignored
+  `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow). The canonical
+  Linux/Miniconda path above still applies on the original dev machine.
+- What changed: added `features/{preprocess,cross_sectional,carry,orderflow}.py` plus
+  tests and `notebooks/demo_phase1_{cross_sectional,all_factors}.py`.
+- Commands run: `pytest -q`, `ruff check`, `mypy features`, and executed both demos.
+- Test results: `pytest` 50 passed; `ruff` passed; `mypy features` no issues; demos clean.
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Next recommended step: start Phase 1 feature preprocessing and cross-sectional factor tests.
+- Not pushed: merge + tag are local only; `origin` not updated this session (push on request).
+- Next recommended step: start Phase 2 factor analysis (IC/ICIR + FDR) in `factors/`.
