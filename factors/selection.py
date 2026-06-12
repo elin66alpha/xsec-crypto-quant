@@ -52,13 +52,17 @@ def compute_ic_summaries(
     close: pd.DataFrame,
     horizons: tuple[int, ...] = DEFAULT_HORIZONS,
 ) -> dict[str, dict[str, float]]:
-    """对每个 因子 × horizon 算 IC 汇总,键为 ``"name@{h}d"``。"""
+    """对每个 因子 × horizon 算 IC 汇总,键为 ``"name@{h}d"``。
+
+    horizon=h 的重叠前向收益 IC 序列按约定传 ``hac_lags=h-1`` 给 ``ic_summary``；
+    horizon=1 时退化为旧版裸 t 值。
+    """
     fwd_cache = {h: forward_return(close, h) for h in horizons}
     out: dict[str, dict[str, float]] = {}
     for name, fac in panels.items():
         for h in horizons:
             ic = cross_sectional_ic(fac, fwd_cache[h])
-            out[f"{name}@{h}d"] = ic_summary(ic)
+            out[f"{name}@{h}d"] = ic_summary(ic, hac_lags=h - 1)
     return out
 
 

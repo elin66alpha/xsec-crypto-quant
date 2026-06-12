@@ -127,7 +127,35 @@ Phase 4 (cross-sectional long/short strategy) is now complete in `strategy/`:
   book (discrete ±0.25 jumps) — membership hysteresis is the real turnover lever (Phase 5).
 - Decisions fixed by user: equal-weight factor combination; no-trade band parameterized
   (default 0.05, finalize in Phase 5).
-- Not done: Phase 5+ implementation. `backtest/` and `live/` currently contain only `__init__.py`.
+
+Phase 5 (backtest and statistical-honesty checks) is now complete in `backtest/`:
+
+- Done: `backtest/xsec_runner.py` — cost-aware cross-sectional long/short backtester:
+  score → quantile target weights → no-trade band → regime/correlation deleverage →
+  next-open execution shift → open-to-open PnL; deducts taker fee, slippage, and funding
+  each period. Funding PnL uses perpetual convention: positive funding means longs pay
+  and shorts receive.
+- Done: `backtest/metrics.py` — annualized return/volatility, Sharpe, Sortino, Calmar,
+  max drawdown, win rate, realized BTC beta helper, turnover summary, and bootstrap
+  Sharpe confidence intervals. Reports are CI-first rather than naked point estimates.
+- Done: `backtest/walkforward.py` — three-way sample split with locked-holdout guard
+  (holdout is not returned unless explicitly unlocked) plus train 18M / validation 6M /
+  step 3M walk-forward windows.
+- Done: `backtest/deflated_sharpe.py` — Deflated Sharpe Ratio approximation that penalizes
+  the number of parameter trials and adjusts for skew/kurtosis.
+- Done: `backtest/overfitting_check.py` — parameter-grid expansion, parameter sensitivity,
+  validation-only candidate selection, Monte Carlo bootstrap wrapper, DSR report, and
+  walk-forward summary.
+- Done: tests `tests/test_backtest_runner.py`, `test_backtest_metrics.py`,
+  `test_walkforward.py`, `test_deflated_sharpe.py`, `test_overfitting_check.py`
+  (154 tests total with Phases 0–4).
+- Done: teaching demo `notebooks/demo_phase5_backtest.py` (synthetic predictive panel;
+  three-way split without holdout unlock; cost/funding-aware backtest; bootstrap CI;
+  Deflated Sharpe with recorded parameter-trial count; walk-forward summary).
+- Important: Phase 5 adds the backtest/statistics machinery but does **not** inspect real
+  locked holdout data. Before any real holdout unlock, tag `pre-holdout-freeze`, freeze
+  parameters, then inspect holdout once only.
+- Not done: Phase 6+ implementation. `live/` currently contains only `__init__.py`.
 
 ## Verification Status
 
@@ -189,6 +217,14 @@ Phase 4 verification (Windows, same `.venv`):
 - `pytest`: 136 passed. `ruff check strategy/ tests/`: passed. `mypy strategy regime
   factors features`: no issues found (21 source files).
 - `notebooks/demo_phase4_strategy.py` runs clean; risk check passes (gross ≤ 2x held).
+
+Phase 5 verification (Linux/Miniconda env `/home/pc/miniconda3/envs/xsec-crypto-quant`):
+
+- `pytest`: 154 passed. `ruff check .`: passed. `mypy backtest strategy regime factors
+  features tests`: no issues found (52 source files).
+- `notebooks/demo_phase5_backtest.py` runs clean. It uses synthetic data only, keeps the
+  holdout locked by default, records 12 parameter trials for DSR, and prints bootstrap
+  Sharpe confidence intervals plus walk-forward summary.
 
 For future sessions:
 
@@ -258,6 +294,14 @@ These are project invariants, not suggestions:
 - `strategy/risk.py`: portfolio exposure checks (gross/single-side/neutrality).
 - `tests/test_signal.py` / `test_portfolio.py` / `test_rebalance.py` / `test_strategy_risk.py`: Phase 4 offline tests.
 - `notebooks/demo_phase4_strategy.py`: Phase 4 end-to-end strategy demo.
+- `backtest/xsec_runner.py`: cost/funding-aware cross-sectional long/short backtester.
+- `backtest/metrics.py`: performance metrics, bootstrap CI, realized beta, turnover/win rate.
+- `backtest/walkforward.py`: three-way split with locked-holdout guard + rolling windows.
+- `backtest/deflated_sharpe.py`: Deflated Sharpe Ratio approximation for trial-count penalty.
+- `backtest/overfitting_check.py`: parameter sensitivity, bootstrap, DSR and walk-forward summaries.
+- `tests/test_backtest_runner.py` / `test_backtest_metrics.py` / `test_walkforward.py` /
+  `test_deflated_sharpe.py` / `test_overfitting_check.py`: Phase 5 offline tests.
+- `notebooks/demo_phase5_backtest.py`: Phase 5 synthetic end-to-end backtest/statistics demo.
 
 ## Next Agent Checklist
 
@@ -269,22 +313,19 @@ These are project invariants, not suggestions:
 
 ## Immediate Next Work
 
-Recommended next step after Phase 4 (Phase 5: backtest — the statistical-honesty core):
+Recommended next step after Phase 5 (Phase 6: paper trading):
 
-1. Three-way split (ironclad): in-sample 2020–2022 (factor screening, rough ranges),
-   validation 2023 (final parameter choice, day-to-day iteration), locked holdout last
-   6–12 months (unlocked ONCE for the whole project). Tag `pre-holdout-freeze` before unlock.
-2. `backtest/xsec_runner.py` — cross-sectional long/short backtester: rank/group/equal-
-   weight/portfolio PnL/per-period funding/turnover cost (taker fee + slippage + funding).
-3. `backtest/metrics.py` — annualized/drawdown/Sharpe/Sortino/Calmar with bootstrap CIs
-   (not point estimates), quantile monotonicity, realized BTC beta, turnover, win rate.
-4. `backtest/overfitting_check.py` + `deflated_sharpe.py` — parameter sensitivity,
-   walk-forward (train 18M / val 6M / step 3M), Monte Carlo bootstrap 1000×, Deflated
-   Sharpe (penalize the number of trials). This is where window N / quantile / band / q /
-   corr-spike thresholds finally get chosen out-of-sample.
-5. Verdict per decision 12: if edge is robust → Phase 6 paper trading; if FDR-corrected
-   significance fails or cost-adjusted Sharpe CI includes 0 → record the honest negative
-   result, do NOT tune to force it. Either outcome is a successful project.
+1. Run the Phase 5 machinery on real, timestamp-correct OKX data using only in-sample and
+   validation first. Freeze final parameters from validation and record trial counts.
+2. Before inspecting locked holdout, create tag `pre-holdout-freeze`; then unlock holdout
+   once and do not change parameters after seeing it.
+3. If the validation + holdout verdict is robust (FDR-corrected factors, cost/funding-
+   adjusted Sharpe CI positive, DSR passes, no regime/risk rule breach), start Phase 6
+   paper trading in `live/`.
+4. Phase 6 should wire vnpy paper trading, order/execution monitoring, funding/cost
+   reconciliation, and at least 4 weeks of live-vs-backtest consistency checks.
+5. If Phase 5 real-data verdict fails, record the honest negative result and stop rather
+   than tuning to force profitability.
 6. Carry forward: no early-year unbiased claims until a delisted-contract calendar exists;
    orderflow confirmation-only.
 
@@ -309,23 +350,10 @@ the required artifact/tag all agree.
 
 ## Current Handoff
 
-- Last commit/branch: Phase 4 closeout merged into `main`, tag `v0.4-strategy`; work was
-  done on branch `phase-4-strategy`. (Phase 3 = `v0.3-regime`, Phase 2 = `v0.2-factors`,
-  Phase 1 = `v0.1-features`, Phase 0 = `v0.0-data`.)
-- Working tree changes: Phase 4 strategy modules, their tests, one teaching demo, and this
-  handoff update.
-- Environment: this session ran on Windows 11 with no conda. Verified via a gitignored
-  `.venv` (`--system-site-packages` + loguru/pytest/ruff/mypy/pyarrow/hmmlearn). The
-  canonical Linux/Miniconda path above still applies on the original dev machine.
-- What changed: added `strategy/{signal,portfolio,rebalance,risk}.py` plus tests and
-  `notebooks/demo_phase4_strategy.py`.
-- Commands run: `pytest -q`, `ruff check strategy/ tests/`, `mypy strategy regime factors
-  features`, and executed the Phase 4 demo.
-- Test results: `pytest` 136 passed; `ruff` passed; `mypy` no issues (21 files); demo clean.
-- Pending decisions (all land in Phase 5 walk-forward, chosen out-of-sample): window N,
-  quantile width, no-trade band, FDR q, corr-spike thresholds. Fixed: HMM states = 3;
-  equal-weight factor combination.
+- Last commit/branch: `df04c60` on `main`; planned tag `v0.5-backtest`.
+- Working tree state: Clean.
+- What changed: Resolved mypy type errors in the perpetual contract calendar script `scripts/build_okx_perp_calendar.py` and formatted imports.
+- Commands run: `pytest -q`, `ruff check .`, and `mypy` on all packages (`data`, `features`, `factors`, `regime`, `strategy`, `backtest`, `tests`).
+- Test results: `pytest` passed (154 tests); `ruff` passed; `mypy` passed with zero issues in 63 source files.
 - Known blockers: early-history fully unbiased universe still needs a delisted-contract calendar.
-- Push status: confirm with the user before pushing `main` + `v0.4-strategy` to origin.
-- Next recommended step: start Phase 5 backtest (three-way split, costs, Deflated Sharpe,
-  locked holdout) in `backtest/`.
+- Next recommended step: run Phase 5 on real timestamp-correct OKX data; if validation and locked holdout pass after `pre-holdout-freeze`, start Phase 6 paper trading in `live/`.

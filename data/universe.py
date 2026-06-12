@@ -19,9 +19,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -33,6 +35,7 @@ DEFAULT_MIN_LISTING_DAYS = int(os.getenv("UNIVERSE_MIN_LISTING_DAYS", "90"))
 DEFAULT_LOOKBACK_DAYS = int(os.getenv("UNIVERSE_VOLUME_LOOKBACK_DAYS", "30"))
 # lookback 窗口内至少要有这么多个有效成交额日，才有资格参与排名（防止"上市一两天就刷量"入选）
 DEFAULT_MIN_VALID_DAYS_RATIO = 0.5
+DEFAULT_PERP_CALENDAR_PATH = Path(__file__).resolve().parents[1] / "metadata" / "okx_perp_calendar.json"
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,74 @@ def _align_tz(ts: pd.Timestamp, index: pd.Index) -> pd.Timestamp:
     return ts.tz_localize(None) if ts.tz is not None else ts
 
 
+def load_perp_calendar(path: str | Path = DEFAULT_PERP_CALENDAR_PATH) -> pd.DataFrame:
+    """读取 USDT 永续合约上市/退市日历。
+
+    日历用于修正仅从成交额面板推断上市日的幸存者偏差：历史回测应优先使用外部
+    listing/delisting 元数据，尤其是现在已退市、但在早年真实可交易的合约。退市日只
+    用来截断退市后的月份，不能在退市前作为选池信号。
+    """
+    with Path(path).open(encoding="utf-8") as fp:
+        payload = json.load(fp)
+
+    contracts = payload.get("contracts", payload)
+    calendar = pd.DataFrame(contracts)
+    if calendar.empty:
+        return calendar
+
+    required = {"symbol", "listing_date", "delisting_date", "data_source"}
+    missing = required.difference(calendar.columns)
+    if missing:
+        raise ValueError(f"永续合约日历缺少字段: {sorted(missing)}")
+
+    calendar["listing_date"] = pd.to_datetime(calendar["listing_date"], utc=True, errors="coerce")
+    calendar["delisting_date"] = pd.to_datetime(calendar["delisting_date"], utc=True, errors="coerce")
+    if "asset_id" not in calendar.columns:
+        calendar["asset_id"] = calendar.apply(_asset_id_from_calendar_row, axis=1)
+    if calendar["asset_id"].duplicated().any():
+        duplicates = sorted(calendar.loc[calendar["asset_id"].duplicated(), "asset_id"].unique())
+        raise ValueError(f"永续合约日历 asset_id 重复: {duplicates}")
+    calendar = calendar.set_index("asset_id").sort_index()
+    return calendar
+
+
+def _asset_id_from_calendar_row(row: pd.Series) -> str:
+    base = row.get("base")
+    if pd.isna(base) or base is None:
+        base = str(row["symbol"]).split("/", maxsplit=1)[0]
+    listing = row.get("listing_date")
+    suffix = "unknown" if pd.isna(listing) else pd.Timestamp(listing).strftime("%Y%m%d")
+    return f"{base}-{suffix}"
+
+
+def _calendar_row_for_key(calendar: pd.DataFrame, key: str) -> tuple[str, pd.Series]:
+    """按 asset_id 取日历；裸 symbol 仅在唯一匹配时允许。"""
+    if key in calendar.index:
+        return key, calendar.loc[key]
+    matches = calendar[calendar["symbol"] == key]
+    if len(matches) == 1:
+        asset_key = str(matches.index[0])
+        return asset_key, matches.iloc[0]
+    if len(matches) > 1:
+        asset_ids = sorted(str(idx) for idx in matches.index)
+        raise ValueError(f"{key} 对应多个 asset_id {asset_ids}，必须传入唯一 asset_id")
+    raise KeyError(key)
+
+
+def calendar_listing_dates(calendar: pd.DataFrame) -> pd.Series:
+    """从合约日历提取上市日期 Series，index 为唯一 asset_id。"""
+    if "listing_date" not in calendar.columns:
+        raise ValueError("永续合约日历缺少 listing_date 字段")
+    return calendar["listing_date"].dropna()
+
+
+def calendar_delisting_dates(calendar: pd.DataFrame) -> pd.Series:
+    """从合约日历提取退市日期 Series，index 为唯一 asset_id。"""
+    if "delisting_date" not in calendar.columns:
+        raise ValueError("永续合约日历缺少 delisting_date 字段")
+    return calendar["delisting_date"].dropna()
+
+
 def infer_listing_dates(dollar_volume: pd.DataFrame) -> pd.Series:
     """由成交额面板推断每个标的的"上市日"代理 = 第一条有效（非 NaN）数据日。
 
@@ -84,6 +155,7 @@ def select_universe(
     dollar_volume: pd.DataFrame,
     as_of: pd.Timestamp,
     listing_dates: pd.Series | None = None,
+    delisting_dates: pd.Series | None = None,
     config: UniverseConfig | None = None,
 ) -> list[str]:
     """选出 ``as_of`` 时点（收盘后）真实可交易的 Top N 标的。
@@ -98,6 +170,9 @@ def select_universe(
         判定时点（含当日）。
     listing_dates : Series, optional
         每个标的的上市日；缺省则由 ``dollar_volume`` 推断。
+    delisting_dates : Series, optional
+        每个标的的退市日；``as_of`` 晚于退市日时剔除。退市日不能参与排序，只用于
+        防止退市后继续出现在动态池中。
     config : UniverseConfig, optional
 
     Returns
@@ -127,8 +202,15 @@ def select_universe(
         listed = listing_dates.get(symbol)
         if pd.isna(listed):
             continue
-        if (as_of - pd.Timestamp(listed)).days < config.min_listing_days:
+        listed_ts = _align_tz(pd.Timestamp(listed), dollar_volume.index)
+        if (as_of - listed_ts).days < config.min_listing_days:
             continue
+        if delisting_dates is not None:
+            delisted = delisting_dates.get(symbol)
+            if pd.notna(delisted):
+                delisted_ts = _align_tz(pd.Timestamp(delisted), dollar_volume.index)
+                if as_of > delisted_ts:
+                    continue
         # 3) 窗口内有足够有效成交额天数
         col = window[symbol].dropna()
         if len(col) < min_valid_days:
@@ -154,6 +236,8 @@ def build_universe_history(
     start: pd.Timestamp,
     end: pd.Timestamp,
     listing_dates: pd.Series | None = None,
+    delisting_dates: pd.Series | None = None,
+    calendar: pd.DataFrame | None = None,
     config: UniverseConfig | None = None,
 ) -> dict[pd.Timestamp, list[str]]:
     """逐月构建动态池：返回 {月初日期 -> 当月可交易成分列表}。
@@ -162,12 +246,15 @@ def build_universe_history(
     与日频持仓再平衡是两个层面：池是月度的，持仓是日度的）。
     """
     config = config or UniverseConfig()
+    if calendar is not None:
+        listing_dates = calendar_listing_dates(calendar)
+        delisting_dates = calendar_delisting_dates(calendar)
     if listing_dates is None:
         listing_dates = infer_listing_dates(dollar_volume)
 
     history: dict[pd.Timestamp, list[str]] = {}
     for month_start in month_start_dates(start, end):
-        members = select_universe(dollar_volume, month_start, listing_dates, config)
+        members = select_universe(dollar_volume, month_start, listing_dates, delisting_dates, config)
         history[month_start] = members
         logger.debug("universe {} -> {} 个标的", month_start.date(), len(members))
     return history
@@ -212,29 +299,65 @@ def load_dollar_volume_panel(
     symbols: list[str] | None = None,
     since: pd.Timestamp | None = None,
     until: pd.Timestamp | None = None,
+    calendar: pd.DataFrame | None = None,
+    fetch_session=None,
 ) -> pd.DataFrame:
     """拉取各标的日线，构造美元成交额宽表（index=日期, columns=symbol）。
 
     复用 ``data/fetcher.py`` 的分页拉取（OKX 单次最多 100 根，必须分页）。
+    若传入合约日历，则按 ``data_source`` 对已退市合约走 Binance Vision fallback。
+    此时输出列使用唯一 ``asset_id``，而不是可能复用的交易所 symbol。
     dollar_volume ≈ close × base_volume（审计说明①）。
     """
     from .fetcher import fetch_ohlcv  # 局部导入，避免纯逻辑路径牵入 fetcher
 
-    exchange = _make_okx_perp(exchange)
     if symbols is None:
-        symbols = list_perpetual_symbols(exchange)
+        if calendar is not None:
+            symbols = list(calendar.index)
+        else:
+            exchange = _make_okx_perp(exchange)
+            symbols = list_perpetual_symbols(exchange)
+
+    source_map: dict[str, tuple[str, str, str, str | None]] = {}
+    for requested_symbol in symbols:
+        output_symbol = requested_symbol
+        fetch_symbol = requested_symbol
+        source = "okx"
+        binance_symbol = None
+        if calendar is not None:
+            output_symbol, row = _calendar_row_for_key(calendar, requested_symbol)
+            fetch_symbol = str(row.get("symbol", requested_symbol))
+            source_value = row.get("data_source", "okx")
+            source = "okx" if pd.isna(source_value) else str(source_value)
+            binance_value = row.get("binance_symbol")
+            if pd.notna(binance_value):
+                binance_symbol = str(binance_value)
+        source_map[requested_symbol] = (output_symbol, fetch_symbol, source, binance_symbol)
+
+    if any(source == "okx" for _, _, source, _ in source_map.values()):
+        exchange = _make_okx_perp(exchange)
 
     series_map: dict[str, pd.Series] = {}
-    for symbol in symbols:
+    for requested_symbol in symbols:
+        output_symbol, fetch_symbol, source, binance_symbol = source_map[requested_symbol]
         try:
-            df = fetch_ohlcv(symbol, timeframe="1d", since=since, until=until, exchange=exchange)
+            df = fetch_ohlcv(
+                fetch_symbol,
+                timeframe="1d",
+                since=since,
+                until=until,
+                exchange=exchange if source == "okx" else None,
+                source=source,
+                binance_symbol=binance_symbol,
+                session=fetch_session,
+            )
         except Exception as exc:  # noqa: BLE001 — 单标的失败不应中断整体
-            logger.warning("拉取 {} 失败：{}", symbol, exc)
+            logger.warning("拉取 {} 失败：{}", requested_symbol, exc)
             continue
         if df.empty:
             continue
         idx = df.index.normalize()
-        series_map[symbol] = pd.Series((df["close"] * df["volume"]).values, index=idx)
+        series_map[output_symbol] = pd.Series((df["close"] * df["volume"]).values, index=idx)
 
     if not series_map:
         return pd.DataFrame()

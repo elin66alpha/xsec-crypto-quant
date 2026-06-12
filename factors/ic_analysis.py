@@ -9,7 +9,7 @@
 
     mean(IC)  —— 平均预测方向与强度（正=因子大者未来收益高）
     ICIR      —— IC 的稳定性 = mean(IC) / std(IC)，比单个 IC 数字更可信
-    t 统计量  —— = ICIR × sqrt(N)，用于判断 mean(IC) 是否显著异于 0
+    t 统计量  —— horizon=1 时默认 = ICIR × sqrt(N)；重叠 horizon 可用 HAC 标准误修正
 
 > 概念（首次出现）：**IC** = 因子打分与未来收益的截面相关性，衡量"排得准不准";
 > **ICIR** = IC 的稳定性（均值/标准差），衡量"每期都稳不稳"。两者都高才算好因子。
@@ -95,23 +95,59 @@ def cross_sectional_ic(
     return pd.Series(ic_values, name=f"IC_{method}")
 
 
-def ic_summary(ic: pd.Series) -> dict[str, float]:
+def _newey_west_se_mean(values: np.ndarray, mean: float, hac_lags: int) -> float:
+    """Newey-West(HAC) 估计 mean(IC) 的标准误。"""
+    n = int(len(values))
+    centered = values - mean
+    var_nw = float(np.dot(centered, centered) / n)
+    max_lag = min(hac_lags, n - 1)
+    for k in range(1, max_lag + 1):
+        weight = 1.0 - k / (hac_lags + 1)
+        gamma_k = float(np.dot(centered[k:], centered[:-k]) / n)
+        var_nw += 2.0 * weight * gamma_k
+
+    if var_nw < 0 and np.isclose(var_nw, 0.0):
+        var_nw = 0.0
+    if var_nw < 0:
+        return float("nan")
+    return float(np.sqrt(var_nw / n))
+
+
+def ic_summary(ic: pd.Series, hac_lags: int = 0) -> dict[str, float]:
     """汇总一条 IC 序列：均值、标准差、ICIR、胜率、t 统计量、有效期数。
 
-    - ``icir`` = mean(IC) / std(IC)（std 用样本标准差 ddof=1）
-    - ``hit_rate`` = IC > 0 的比例（方向稳定性的直观补充）
-    - ``t_stat`` = ICIR × sqrt(N)，检验 mean(IC) 是否显著异于 0
+    ``icir`` = mean(IC) / std(IC)（std 用样本标准差 ddof=1）；
+    ``hit_rate`` = IC > 0 的比例；``se_mean`` 是 mean(IC) 的标准误。
+
+    ``hac_lags=0`` 时保持旧行为：``t_stat = ICIR × sqrt(N)``。这是 horizon=1
+    的默认用法,也保证历史报告/测试向后兼容。
+
+    ``hac_lags=L>0`` 时,``t_stat`` 改用 Newey-West(HAC) 标准误：
+    ``var_NW = gamma_0 + 2 * sum_{k=1..L} (1 - k/(L+1)) * gamma_k``，
+    ``gamma_k`` 是 IC 序列的 k 阶自协方差（分母用 n）,``se_mean = sqrt(var_NW/n)``。
+
+    为什么需要 HAC：horizon=3D/5D/10D 的前向收益若逐日滚动计算,相邻观测共享未来收益
+    区间,IC 序列会正自相关,裸 ``ICIR × sqrt(N)`` 会高估有效样本量和显著性。
+    调用约定：horizon=h 的 IC 序列应传 ``hac_lags=h-1``；h=1 时传 0,退化为旧公式。
     """
+    if hac_lags < 0:
+        raise ValueError(f"hac_lags 必须 >= 0,收到 {hac_lags}")
     valid = ic.dropna()
     n = int(len(valid))
     if n == 0:
         return {"mean_ic": np.nan, "std_ic": np.nan, "icir": np.nan,
-                "hit_rate": np.nan, "t_stat": np.nan, "n_obs": 0}
+                "hit_rate": np.nan, "t_stat": np.nan, "n_obs": 0,
+                "se_mean": np.nan, "hac_lags": hac_lags}
     mean_ic = float(valid.mean())
     std_ic = float(valid.std(ddof=1)) if n > 1 else np.nan
     icir = mean_ic / std_ic if std_ic and np.isfinite(std_ic) and std_ic != 0 else np.nan
     hit_rate = float((valid > 0).mean())
-    t_stat = icir * np.sqrt(n) if np.isfinite(icir) else np.nan
+    if hac_lags == 0:
+        se_mean = float(std_ic / np.sqrt(n)) if np.isfinite(std_ic) else np.nan
+        t_stat = icir * np.sqrt(n) if np.isfinite(icir) else np.nan
+    else:
+        se_mean = _newey_west_se_mean(valid.to_numpy(dtype=float), mean_ic, hac_lags)
+        t_stat = mean_ic / se_mean if se_mean and np.isfinite(se_mean) else np.nan
     return {
         "mean_ic": mean_ic,
         "std_ic": std_ic,
@@ -119,4 +155,6 @@ def ic_summary(ic: pd.Series) -> dict[str, float]:
         "hit_rate": hit_rate,
         "t_stat": t_stat,
         "n_obs": n,
+        "se_mean": se_mean,
+        "hac_lags": hac_lags,
     }

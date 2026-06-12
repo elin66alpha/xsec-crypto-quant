@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import regime.market_regime as market_regime
 from regime.market_regime import (
     DEFAULT_N_STATES,
     REGIME_CRISIS,
@@ -132,3 +133,71 @@ def test_label_regimes_expanding_no_lookahead_and_valid_labels():
     # 前 min_train 段无模型 → NaN
     assert regimes.iloc[:150].isna().all()
     assert len(valid) > 0
+
+
+def _legacy_block_only_expanding(
+    features: pd.DataFrame,
+    n_states: int = DEFAULT_N_STATES,
+    vol_col: str = "market_vol",
+    min_train: int = 10,
+    refit_every: int = 5,
+) -> pd.Series:
+    """旧实现：每个 refit 块孤立 Viterbi,用于回归测试对照。"""
+    x = features.dropna()
+    labels = pd.Series(np.nan, index=x.index, name="regime")
+    start = min_train
+    while start < len(x):
+        end = min(start + refit_every, len(x))
+        train = x.iloc[:start]
+        model = market_regime.fit_hmm(train, n_states=n_states, random_state=42)
+        train_raw = model.predict(train.to_numpy())
+        mapping = _vol_order_mapping(train_raw, train[vol_col].to_numpy(), n_states)
+        block_raw = model.predict(x.iloc[start:end].to_numpy())
+        labels.iloc[start:end] = [float(mapping.get(s, np.nan)) for s in block_raw]
+        start = end
+    return labels
+
+
+def test_label_regimes_expanding_conditions_viterbi_on_full_history(monkeypatch):
+    """新旧块预测差异只应来自块首历史条件,且输出索引/NaN 区间不应错位。"""
+
+    class FakeHistoryAwareModel:
+        def predict(self, values: np.ndarray) -> np.ndarray:
+            out = np.zeros(len(values), dtype=int)
+            if len(values) == 0:
+                return out
+            out[0] = 2  # 孤立块首没有历史条件时走单独状态
+            out[1:] = (values[1:, 0] > values[:-1, 0]).astype(int)
+            return out
+
+    def fake_fit_hmm(
+        features: pd.DataFrame,
+        n_states: int = DEFAULT_N_STATES,
+        random_state: int = 42,
+        n_iter: int = 200,
+    ) -> FakeHistoryAwareModel:
+        return FakeHistoryAwareModel()
+
+    idx = _dates(30)
+    features = pd.DataFrame(
+        {
+            "market_vol": np.linspace(0.01, 0.30, len(idx)),
+            "xs_corr_median": np.linspace(0.10, 0.20, len(idx)),
+            "mean_abs_return": np.linspace(0.01, 0.03, len(idx)),
+        },
+        index=idx,
+    )
+    monkeypatch.setattr(market_regime, "fit_hmm", fake_fit_hmm)
+
+    new = label_regimes_expanding(features, min_train=10, refit_every=5)
+    old = _legacy_block_only_expanding(features, min_train=10, refit_every=5)
+
+    assert new.index.equals(features.index)
+    assert new.iloc[:10].isna().all()
+    assert new.iloc[10:].notna().all()
+    assert old.iloc[10:].notna().all()
+
+    diff_positions = set(np.flatnonzero(((new != old) & new.notna() & old.notna()).to_numpy()))
+    block_starts = set(range(10, len(features), 5))
+    assert diff_positions
+    assert diff_positions <= block_starts
