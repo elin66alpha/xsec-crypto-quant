@@ -71,7 +71,7 @@
   - Locked holdout：2025-10-01 ~ 解锁日（今日约 8.4 个月，落在 6–12 个月区间；**holdout_start 固定不再移动**，解锁时以当日为 holdout_end 一次性冻结）
   - 落地：更新 `backtest/walkforward.py` 的 `SplitConfig` 默认值，提交信息引用本条。
 
-### 7. Walk-forward 只有"评估"没有"选参"管线
+### 7. `[x]` Walk-forward 只有"评估"没有"选参"管线（commit feat(backtest): add walk-forward parameter selection pipeline，codex-w2 实现）
 
 - **位置**：`backtest/overfitting_check.py` ＋ `notebooks/demo_phase5_backtest.py`（固定参数在各 validation 窗口算 Sharpe）。
 - **问题**：CLAUDE.md 承诺"动量窗口 N 等参数由 Walk-Forward 选"，需要每窗口 train→网格选参→该窗口 validation 评估的完整循环，目前没接起来。
