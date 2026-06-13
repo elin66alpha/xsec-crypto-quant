@@ -15,26 +15,30 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-import requests
-from loguru import logger
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from data.fetcher import fetch_funding_rate_history, fetch_ohlcv, make_okx_perp
-from data.storage import (
+import pandas as pd  # noqa: E402
+import requests  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from data.fetcher import fetch_funding_rate_history, fetch_ohlcv, make_okx_perp  # noqa: E402
+from data.storage import (  # noqa: E402
     available_range,
     load_funding,
     load_ohlcv,
     save_funding,
     save_ohlcv,
 )
-from data.universe import (
+from data.universe import (  # noqa: E402
     UniverseConfig,
     build_universe_history,
     calendar_delisting_dates,
     calendar_listing_dates,
     load_perp_calendar,
 )
-from data.validate import (
+from data.validate import (  # noqa: E402
     ValidationReport,
     check_delisted_symbol_coverage,
     check_universe_consistency,

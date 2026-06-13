@@ -28,6 +28,7 @@ MAX_EMPTY_PAGES = 2  # 连续空页则停止，避免死循环
 BINANCE_VISION_BASE_URL = "https://data.binance.vision/data/futures/um/daily/klines"
 BINANCE_VISION_MONTHLY_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
 BINANCE_VISION_RETRY_STATUS = {429, 500, 502, 503, 504}
+OKX_FUNDING_RATE_HISTORY_URL = "https://www.okx.com/api/v5/public/funding-rate-history"
 
 
 def make_okx_perp(exchange=None):
@@ -36,7 +37,15 @@ def make_okx_perp(exchange=None):
         return exchange
     import ccxt
 
-    return ccxt.okx({"enableRateLimit": True})
+    out = ccxt.okx({"enableRateLimit": True})
+
+    def _safe_keysort(dictionary):
+        # OKX can expose non-trading instruments that leave a None id in
+        # ccxt.markets_by_id; ccxt's default keysort cannot compare None to str.
+        return dict(sorted(dictionary.items(), key=lambda kv: "" if kv[0] is None else str(kv[0])))
+
+    out.keysort = _safe_keysort
+    return out
 
 
 def _to_ms(ts) -> int | None:
@@ -68,6 +77,17 @@ def to_binance_usdt_symbol(symbol: str) -> str:
         parts = symbol.split("-")
         if len(parts) >= 2:
             return f"{parts[0]}{parts[1]}"
+    return symbol
+
+
+def to_okx_inst_id(symbol: str) -> str:
+    """把 ccxt/OKX 永续 symbol 映射成 OKX REST instrument id。"""
+    if "-" in symbol and symbol.endswith("-SWAP"):
+        return symbol
+    if "/" in symbol:
+        base, quote_part = symbol.split("/", maxsplit=1)
+        quote = quote_part.split(":", maxsplit=1)[0]
+        return f"{base}-{quote}-SWAP"
     return symbol
 
 
@@ -123,11 +143,15 @@ def _get_with_retries(
     timeout: int = 30,
     max_retries: int = 3,
     backoff_seconds: float = 0.5,
+    params: dict[str, str] | None = None,
 ):
-    """GET with simple exponential backoff for Binance Vision transient errors."""
+    """GET with simple exponential backoff for transient HTTP errors."""
     last_response = None
     for attempt in range(max_retries + 1):
-        response = client.get(url, timeout=timeout)
+        if params is None:
+            response = client.get(url, timeout=timeout)
+        else:
+            response = client.get(url, params=params, timeout=timeout)
         last_response = response
         if response.status_code not in BINANCE_VISION_RETRY_STATUS:
             return response
@@ -342,6 +366,7 @@ def fetch_funding_rate_history(
     since=None,
     until=None,
     exchange=None,
+    session=None,
 ) -> pd.DataFrame:
     """分页拉取单标的 funding rate 历史（决策 3：carry 因子 + 损益结算项）。
 
@@ -350,29 +375,48 @@ def fetch_funding_rate_history(
     DataFrame
         index = datetime（UTC，资金费结算时点，通常每 8h 一次），列 ``fundingRate``。
     """
-    exchange = make_okx_perp(exchange)
-    cursor = _to_ms(since)
-    until_ms = _to_ms(until) or exchange.milliseconds()
+    del exchange  # direct REST avoids ccxt OKX funding cursor semantics.
+    start_ms = _to_ms(since) or 0
+    until_ms = _to_ms(until) or int(pd.Timestamp.now(tz="UTC").timestamp() * 1000)
+    client = session or requests.Session()
+    inst_id = to_okx_inst_id(symbol)
 
-    rows: list[dict] = []
-    empty_pages = 0
+    rows: list[dict[str, float | int]] = []
+    cursor: str | None = None
     while True:
-        batch = exchange.fetch_funding_rate_history(symbol, since=cursor, limit=FUNDING_PAGE_LIMIT)
-        batch = [r for r in batch if r["timestamp"] is not None and r["timestamp"] <= until_ms]
+        params = {"instId": inst_id, "limit": str(FUNDING_PAGE_LIMIT)}
+        if cursor is not None:
+            # OKX uses `after` to request records older than the cursor.
+            params["after"] = cursor
+        response = _get_with_retries(
+            client,
+            OKX_FUNDING_RATE_HISTORY_URL,
+            params=params,
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("code") != "0":
+            raise RuntimeError(f"OKX funding history error for {inst_id}: {payload}")
+        batch = payload.get("data", [])
         if not batch:
-            empty_pages += 1
-            if cursor is None or empty_pages >= MAX_EMPTY_PAGES:
-                break
-            cursor = (cursor or 0) + 8 * 3600 * 1000 * FUNDING_PAGE_LIMIT
-            continue
-        empty_pages = 0
-        rows.extend(batch)
-        last_ts = batch[-1]["timestamp"]
-        if last_ts >= until_ms or len(batch) < FUNDING_PAGE_LIMIT:
             break
-        cursor = last_ts + 1
-        if exchange.rateLimit:
-            time.sleep(exchange.rateLimit / 1000)
+
+        timestamps = [int(row["fundingTime"]) for row in batch if row.get("fundingTime") is not None]
+        for row in batch:
+            ts = int(row["fundingTime"])
+            if start_ms <= ts <= until_ms:
+                rows.append(
+                    {
+                        "timestamp": ts,
+                        "fundingRate": float(row.get("realizedRate") or row.get("fundingRate")),
+                    }
+                )
+        oldest = min(timestamps)
+        if oldest <= start_ms or len(batch) < FUNDING_PAGE_LIMIT:
+            break
+        cursor = str(oldest)
+        time.sleep(0.05)
 
     if not rows:
         logger.warning("fetch_funding_rate_history: {} 无数据", symbol)
