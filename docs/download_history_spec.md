@@ -10,13 +10,18 @@
   含 `asset_id`（资产代际主键，如 `LUNA-20190716`）、`data_source`（`okx` / `binance_vision`）、
   `binance_symbol`。读取用 `data.universe.load_perp_calendar()`。
 - `data/fetcher.py`：`fetch_ohlcv(symbol, source=..., binance_symbol=...)` 已支持 OKX 与
-  Binance Vision daily 归档两条通道；`fetch_funding_rate_history` 支持 OKX funding 分页。
+  Binance Vision daily/monthly 归档两条通道；`fetch_binance_vision_funding` 支持 Binance
+  Vision monthly `fundingRate` 归档；`fetch_funding_rate_history` 仅保留给 OKX 近实时/Phase 6
+  记录用途。
 - `data/storage.py`：按月分片 parquet，写入幂等（重复写去重合并），`available_range()` 支持断点续传。
 - `data/universe.py`：`build_universe_history(panel, start, end, calendar=...)` 逐月选池。
 - `data/validate.py`：`validate_ohlcv`、`check_delisted_symbol_coverage`、`check_universe_consistency`。
-- 口径决定（已定，不要改）：价格/funding/费率统一 OKX；OKX 拿不到的退市合约 K 线走
-  data.binance.vision（有界偏差已披露）；**退市 fallback 合约 funding 按 0 处理**（见
-  `docs/data_availability_audit.md` 说明②），本脚本不拉它们的 funding。
+- 口径决定（2026-06-13 用户确认）：OHLCV 仍按日历在 OKX 与 Binance Vision 间路由；
+  回测期 funding 对**所有进池 asset_id**统一使用 Binance Vision USDT-M monthly
+  `fundingRate` 归档。原因：OKX REST funding 深度约 3 个月，不足以覆盖 2020+ 回测；
+  选择全 Binance funding 归档而不是 OKX/Binance 拼接，以保持 backtest funding 单一来源。
+  缺失 archive 月份按 coverage gap 披露，研究中按 0 处理，并在 Phase 6 用 OKX live funding
+  记录做一致性验证。
 
 ## 交付物
 
@@ -56,12 +61,21 @@ CLI（argparse）：
 - **Stage C — 动态池**：`build_universe_history(panel, start, end, calendar=...)`，
   结果写 `data/historical/universe_history.json`（{月初: [asset_id]}），并打印每月池大小
   及退市成员数。
-- **Stage D — funding**：对历史上**进过池**且 `data_source == "okx"` 的 asset_id，
-  拉 `[max(listing, start−buffer), min(delisting, end)]` 的 funding 历史，存 parquet。
-  binance_vision 合约跳过并 log（funding=0 口径）。
-- **Stage E — 验证**：对全部已下载 asset_id 跑 `validate_ohlcv`；对池历史跑
+- **Stage D — funding**：对历史上**进过池**的每个 asset_id 拉 Binance Vision monthly
+  `fundingRate` 归档，区间为 `[max(listing, start−buffer), min(delisting, end)]`（结束日覆盖
+  到当天 23:59:59.999）。请求 symbol 优先使用日历的 `binance_symbol`，否则用
+  `to_binance_usdt_symbol(symbol)` 映射；存储仍必须用 `asset_id`：
+  `save_funding(df, symbol=asset_id, ...)`。
+  - Binance funding URL：
+    `https://data.binance.vision/data/futures/um/monthly/fundingRate/{SYM}/{SYM}-fundingRate-{YYYY-MM}.zip`。
+  - 只有 monthly 归档，没有 daily fallback。单月 404 是 coverage gap，不是下载失败；合约所有
+    月份都缺失时 log 为 archive gap，validation 以 warning 披露，失败清单不计 failure。
+- **Stage E — 验证**：对全部已下载 asset_id 跑 `validate_ohlcv`，并用日历 expected start/end
+  做边界覆盖闸门（实际边界短缺 >3 天为 error）；对池历史跑
   `check_universe_consistency` 与 `check_delisted_symbol_coverage`；
-  汇总写 `reports/download_validation.md`（区分 error/warning，给出每合约 gap 统计）。
+  汇总写 `reports/download_validation.md`（区分 error/warning，给出每合约 expected/actual
+  边界与 gap 统计）。报告必须包含 funding coverage section：每个进池 asset_id 的 in-pool
+  days、funding-covered days、coverage fraction、funding rows、first/last funding，以及 aggregate。
 
 ### 3. 试跑模式 `--trial`（用户已确认先试跑再放全量）
 
@@ -82,13 +96,17 @@ CLI（argparse）：
 
 - OKX REST 能否翻页拉到 2020 年的 BTC-USDT-SWAP 日线（普通 candles 端点深度有限，
   可能需要 ccxt 走 history-candles；试跑必须实际拿到 2020-08 起的数据才算通过）。
-- OKX funding 历史的回溯深度（试跑对 BTC/ETH 拉到 2020-08，确认非空且连续 8h 一条）。
+- Binance Vision funding 归档深度：试跑 diagnostics 必须显示 BTC/ETH funding 回到 2020-08
+  且接近 8h cadence；LUNA 在 2021 覆盖；FTT pre-2022-04 gap 在 coverage/probe 统计中可见。
 
 ### 5. 测试
 
-`tests/test_download_history.py`：
+`tests/test_fetcher.py` / `tests/test_download_history.py`：
 - 月度 zip 解析（构造内存 zip，mock HTTP）；月度 404 回退逐日的路径。
+- funding monthly zip 解析（构造内存 zip，mock HTTP），monthly 404 作为 coverage gap 跳过。
 - 驱动的断点续传逻辑：mock fetcher，已有分片时不重复请求已覆盖区间。
+- Stage D funding：所有 pool asset_id 都用 Binance funding 归档，存储键为 `asset_id`，空 archive
+  是 skip/gap 而不是 failure。
 - Stage B 面板构建：写临时 parquet，验证宽表形状与 close×volume 数值。
 - 现有 `pytest -q` 全部保持通过。
 
@@ -99,6 +117,7 @@ CLI（argparse）：
    - BTC 数据回溯到 2020-08；
    - 2021-01 池成分含 ≥ 5 个现已退市 asset_id；
    - 跨源对比相关系数 ≥ 0.99（或文档化修正后达到）；
+   - BTC/ETH funding diagnostics 回到 2020-08，LUNA/FTT archive probes 写入报告；
    - `reports/download_validation.md` 与 `reports/trial_source_comparison.md` 生成。
 3. 全程不改动统计/回测逻辑模块；不提交任何 parquet/数据文件（.gitignore 已覆盖 data/）。
 4. Conventional Commits，提交信息说明做了什么 + 为什么。
