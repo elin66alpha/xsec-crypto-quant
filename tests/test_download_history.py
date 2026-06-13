@@ -8,10 +8,11 @@ import zipfile
 import pandas as pd
 
 from data.fetcher import fetch_binance_vision_ohlcv
-from data.storage import save_ohlcv
+from data.storage import load_funding, save_funding, save_ohlcv
 from scripts.download_history import (
     ContractDownload,
     build_dollar_volume_panel_from_storage,
+    download_funding_stage,
     download_ohlcv_stage,
     validate_downloads,
 )
@@ -70,6 +71,37 @@ def _ohlcv(start: str, periods: int, close: float = 10.0, volume: float = 100.0)
             "volume": volume,
         },
         index=idx,
+    )
+
+
+def _funding(start: str, periods: int, rate: float = 0.0001) -> pd.DataFrame:
+    idx = pd.date_range(start, periods=periods, freq="8h", tz="UTC")
+    return pd.DataFrame({"fundingRate": rate}, index=idx)
+
+
+def _calendar_with_delisted(asset_id: str = "AAA-20200101") -> pd.DataFrame:
+    delisted_rows = pd.DataFrame(
+        {
+            "symbol": [f"OLD{i}/USDT:USDT" for i in range(10)],
+            "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")] * 10,
+            "delisting_date": [pd.Timestamp("2023-01-01", tz="UTC")] * 10,
+            "data_source": ["binance_vision"] * 10,
+        },
+        index=[f"OLD{i}-20200101" for i in range(10)],
+    )
+    return pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "symbol": ["AAA/USDT:USDT"],
+                    "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")],
+                    "delisting_date": [pd.NaT],
+                    "data_source": ["okx"],
+                },
+                index=[asset_id],
+            ),
+            delisted_rows,
+        ]
     )
 
 
@@ -168,32 +200,68 @@ def test_build_dollar_volume_panel_from_storage(tmp_path):
     assert panel.loc[pd.Timestamp("2022-01-02", tz="UTC"), "BBB-20200101"] == 1000.0
 
 
+def test_download_funding_stage_uses_binance_archives_for_all_pool_assets(tmp_path):
+    calls: list[str] = []
+
+    def fake_fetcher(symbol, since, until, session=None):
+        del since, until, session
+        calls.append(symbol)
+        if symbol == "GAPUSDT":
+            return pd.DataFrame(columns=["fundingRate"], index=pd.DatetimeIndex([], name="datetime"))
+        return _funding("2021-01-01", periods=2)
+
+    contracts = {
+        "BTC-20191112": ContractDownload(
+            asset_id="BTC-20191112",
+            symbol="BTC/USDT:USDT",
+            data_source="okx",
+            binance_symbol=None,
+            listing_date=pd.Timestamp("2019-11-12", tz="UTC"),
+            delisting_date=None,
+            fetch_start=pd.Timestamp("2021-01-01", tz="UTC"),
+            fetch_end=pd.Timestamp("2021-01-02", tz="UTC"),
+        ),
+        "LUNA-20190726": ContractDownload(
+            asset_id="LUNA-20190726",
+            symbol="LUNA/USDT:USDT",
+            data_source="binance_vision",
+            binance_symbol="LUNAUSDT",
+            listing_date=pd.Timestamp("2019-07-26", tz="UTC"),
+            delisting_date=pd.Timestamp("2022-05-13", tz="UTC"),
+            fetch_start=pd.Timestamp("2021-01-01", tz="UTC"),
+            fetch_end=pd.Timestamp("2021-01-02", tz="UTC"),
+        ),
+        "GAP-20200101": ContractDownload(
+            asset_id="GAP-20200101",
+            symbol="GAP/USDT:USDT",
+            data_source="okx",
+            binance_symbol=None,
+            listing_date=pd.Timestamp("2020-01-01", tz="UTC"),
+            delisting_date=None,
+            fetch_start=pd.Timestamp("2021-01-01", tz="UTC"),
+            fetch_end=pd.Timestamp("2021-01-02", tz="UTC"),
+        ),
+    }
+
+    downloaded, skipped, failures = download_funding_stage(
+        ["BTC-20191112", "LUNA-20190726", "GAP-20200101"],
+        contracts,
+        data_dir=tmp_path,
+        fetcher=fake_fetcher,
+    )
+
+    assert calls == ["BTCUSDT", "LUNAUSDT", "GAPUSDT"]
+    assert downloaded == ["BTC-20191112", "LUNA-20190726"]
+    assert skipped == ["GAP-20200101"]
+    assert failures == []
+    assert len(load_funding("BTC-20191112", data_dir=tmp_path)) == 2
+    assert len(load_funding("LUNA-20190726", data_dir=tmp_path)) == 2
+
+
 def test_validate_downloads_errors_on_boundary_shortfall(tmp_path):
     asset_id = "AAA-20200101"
     save_ohlcv(_ohlcv("2021-01-01", periods=5), asset_id, data_dir=tmp_path)
-    delisted_rows = pd.DataFrame(
-        {
-            "symbol": [f"OLD{i}/USDT:USDT" for i in range(10)],
-            "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")] * 10,
-            "delisting_date": [pd.Timestamp("2023-01-01", tz="UTC")] * 10,
-            "data_source": ["binance_vision"] * 10,
-        },
-        index=[f"OLD{i}-20200101" for i in range(10)],
-    )
-    calendar = pd.concat(
-        [
-            pd.DataFrame(
-                {
-                    "symbol": ["AAA/USDT:USDT"],
-                    "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")],
-                    "delisting_date": [pd.NaT],
-                    "data_source": ["okx"],
-                },
-                index=[asset_id],
-            ),
-            delisted_rows,
-        ]
-    )
+    calendar = _calendar_with_delisted(asset_id)
 
     report = validate_downloads(
         [asset_id],
@@ -214,3 +282,32 @@ def test_validate_downloads_errors_on_boundary_shortfall(tmp_path):
     text = (tmp_path / "validation.md").read_text(encoding="utf-8")
     assert "expected_start" in text
     assert "end_shortfall_days" in text
+
+
+def test_validate_downloads_reports_funding_coverage_as_warning(tmp_path):
+    asset_id = "AAA-20200101"
+    save_ohlcv(_ohlcv("2021-01-01", periods=5), asset_id, data_dir=tmp_path)
+    save_funding(_funding("2021-01-01", periods=3), asset_id, data_dir=tmp_path)
+
+    report = validate_downloads(
+        [asset_id],
+        {pd.Timestamp("2021-01-01", tz="UTC"): [asset_id]},
+        _calendar_with_delisted(asset_id),
+        data_dir=tmp_path,
+        report_path=tmp_path / "validation.md",
+        expected_ranges={
+            asset_id: (
+                pd.Timestamp("2021-01-01", tz="UTC"),
+                pd.Timestamp("2021-01-05", tz="UTC"),
+            )
+        },
+        funding_pool_asset_ids=[asset_id],
+        funding_start=pd.Timestamp("2021-01-01", tz="UTC"),
+        funding_end=pd.Timestamp("2021-01-05", tz="UTC"),
+    )
+
+    assert report.ok
+    assert any("funding coverage" in warning for warning in report.warnings)
+    text = (tmp_path / "validation.md").read_text(encoding="utf-8")
+    assert "## Funding Coverage" in text
+    assert "coverage_fraction" in text

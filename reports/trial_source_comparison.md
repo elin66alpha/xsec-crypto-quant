@@ -15,7 +15,16 @@ Minimum return correlation: 0.999492
 
 ## Funding Depth Diagnostics
 
-| asset_id | rows | first | last | reaches start | max gap hours |
-|---|---:|---|---|---|---:|
-| BTC-20191112 | 0 | None | None | None | None |
-| ETH-20191112 | 0 | None | None | None | None |
+| asset_id | rows | expected_start | first | last | reaches start | max gap hours |
+|---|---:|---|---|---|---|---:|
+| BTC-20191112 | 561 | 2020-08-01 | 2020-07-29 | 2021-01-31 | True | 8.00001 |
+| ETH-20191112 | 561 | 2020-08-01 | 2020-07-29 | 2021-01-31 | True | 8.00001 |
+
+## Funding Archive Probes
+
+| probe | symbol | rows | expected_start | first | last | start_gap_days | max_gap_hours | error |
+|---|---|---:|---|---|---|---:|---:|---|
+| BTC archive start | BTCUSDT | 27 | 2020-08-01 | 2020-08-01 | 2020-08-09 | 0 | 8.000001944444444 | None |
+| ETH archive start | ETHUSDT | 27 | 2020-08-01 | 2020-08-01 | 2020-08-09 | 0 | 8.000001944444444 | None |
+| LUNA 2021 coverage | LUNAUSDT | 23 | 2021-01-28 | 2021-01-28 | 2021-02-04 | 0 | 8.000003611111111 | None |
+| FTT pre-2022-04 gap | FTTUSDT | 0 | 2021-09-01 | None | None | None | None | None |

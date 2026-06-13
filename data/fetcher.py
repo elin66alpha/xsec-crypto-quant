@@ -27,6 +27,7 @@ FUNDING_PAGE_LIMIT = 100
 MAX_EMPTY_PAGES = 2  # 连续空页则停止，避免死循环
 BINANCE_VISION_BASE_URL = "https://data.binance.vision/data/futures/um/daily/klines"
 BINANCE_VISION_MONTHLY_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
+BINANCE_VISION_FUNDING_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/fundingRate"
 BINANCE_VISION_RETRY_STATUS = {429, 500, 502, 503, 504}
 OKX_FUNDING_RATE_HISTORY_URL = "https://www.okx.com/api/v5/public/funding-rate-history"
 
@@ -104,6 +105,11 @@ def _binance_vision_monthly_url(symbol: str, timeframe: str, month: pd.Timestamp
     )
 
 
+def _binance_vision_funding_url(symbol: str, month: pd.Timestamp) -> str:
+    month_str = month.strftime("%Y-%m")
+    return f"{BINANCE_VISION_FUNDING_BASE_URL}/{symbol}/{symbol}-fundingRate-{month_str}.zip"
+
+
 def _month_end(day: pd.Timestamp) -> pd.Timestamp:
     return (day + pd.offsets.MonthEnd(0)).normalize()
 
@@ -132,6 +138,26 @@ def _parse_binance_vision_zip(content: bytes) -> list[list[float | int]]:
                             float(row[5]),
                         ]
                     )
+            break
+    return rows
+
+
+def _parse_binance_vision_funding_zip(content: bytes) -> list[dict[str, float | int]]:
+    """Parse Binance Vision fundingRate monthly zip files."""
+    rows: list[dict[str, float | int]] = []
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        for name in zf.namelist():
+            with zf.open(name) as fp:
+                reader = csv.DictReader(io.TextIOWrapper(fp, encoding="utf-8-sig"))
+                required = {"calc_time", "last_funding_rate"}
+                if reader.fieldnames is None or not required.issubset(set(reader.fieldnames)):
+                    raise ValueError(f"Binance Vision funding CSV columns unexpected: {reader.fieldnames}")
+                for row in reader:
+                    calc_time = row.get("calc_time")
+                    rate = row.get("last_funding_rate")
+                    if not calc_time or not rate:
+                        continue
+                    rows.append({"timestamp": int(calc_time), "fundingRate": float(rate)})
             break
     return rows
 
@@ -285,6 +311,83 @@ def fetch_binance_vision_ohlcv(
         "fetch_binance_vision_ohlcv {} {}: {} 根 [{} ~ {}]",
         symbol,
         timeframe,
+        len(df),
+        df.index[0].date(),
+        df.index[-1].date(),
+    )
+    return df
+
+
+def fetch_binance_vision_funding(
+    symbol: str,
+    since=None,
+    until=None,
+    session=None,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
+) -> pd.DataFrame:
+    """Fetch Binance Vision USDT-M monthly fundingRate archives.
+
+    Missing monthly zip files are treated as coverage gaps, not request failures.
+    The returned shape matches ``fetch_funding_rate_history``: UTC datetime index
+    and a single ``fundingRate`` column.
+    """
+    start = _to_utc_timestamp(since)
+    if start is None:
+        raise ValueError("Binance Vision funding 必须提供 since")
+    end = _to_utc_timestamp(until) or pd.Timestamp.now(tz="UTC")
+    if end < start:
+        return _empty_funding()
+
+    start_month = start.normalize().replace(day=1)
+    end_month = end.normalize().replace(day=1)
+    binance_symbol = to_binance_usdt_symbol(symbol)
+    client = session or requests.Session()
+    rows: list[dict[str, float | int]] = []
+
+    for month in pd.date_range(start_month, end_month, freq="MS", tz="UTC"):
+        url = _binance_vision_funding_url(binance_symbol, month)
+        response = _get_with_retries(
+            client,
+            url,
+            max_retries=max_retries,
+            backoff_seconds=backoff_seconds,
+        )
+        if response.status_code == 404:
+            logger.info("Binance Vision funding archive missing: {}", url)
+            continue
+        response.raise_for_status()
+        rows.extend(_parse_binance_vision_funding_zip(response.content))
+
+    if not rows:
+        logger.warning(
+            "fetch_binance_vision_funding: {} 无数据 (since={}, until={})",
+            symbol,
+            since,
+            until,
+        )
+        return _empty_funding()
+
+    df = pd.DataFrame(rows)
+    df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    df = (
+        df.drop(columns="timestamp")
+        .drop_duplicates(subset="datetime")
+        .set_index("datetime")
+        .sort_index()
+    )
+    df = df.loc[(df.index >= start) & (df.index <= end)]
+    if df.empty:
+        logger.warning(
+            "fetch_binance_vision_funding: {} 无数据 (since={}, until={})",
+            symbol,
+            since,
+            until,
+        )
+        return _empty_funding()
+    logger.info(
+        "fetch_binance_vision_funding {}: {} 条 [{} ~ {}]",
+        symbol,
         len(df),
         df.index[0].date(),
         df.index[-1].date(),
@@ -458,3 +561,7 @@ def _empty_ohlcv() -> pd.DataFrame:
         columns=["open", "high", "low", "close", "volume"],
         index=pd.DatetimeIndex([], name="datetime"),
     )
+
+
+def _empty_funding() -> pd.DataFrame:
+    return pd.DataFrame(columns=["fundingRate"], index=pd.DatetimeIndex([], name="datetime"))

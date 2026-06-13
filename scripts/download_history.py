@@ -3,7 +3,8 @@
 The driver keeps storage keyed by calendar ``asset_id`` so reused symbols never
 collide on disk. It downloads OHLCV first, builds the dollar-volume panel from
 local parquet only, constructs monthly universe history, then downloads funding
-for OKX contracts that actually entered the historical pool.
+from Binance Vision monthly archives for contracts that entered the historical
+pool.
 """
 
 from __future__ import annotations
@@ -23,7 +24,12 @@ import pandas as pd  # noqa: E402
 import requests  # noqa: E402
 from loguru import logger  # noqa: E402
 
-from data.fetcher import fetch_funding_rate_history, fetch_ohlcv, make_okx_perp  # noqa: E402
+from data.fetcher import (  # noqa: E402
+    fetch_binance_vision_funding,
+    fetch_ohlcv,
+    make_okx_perp,
+    to_binance_usdt_symbol,
+)
 from data.storage import (  # noqa: E402
     available_range,
     load_funding,
@@ -80,6 +86,14 @@ def _iso(ts: pd.Timestamp | None) -> str | None:
 
 def _today_utc() -> str:
     return str(pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d"))
+
+
+def _end_of_day(ts: pd.Timestamp) -> pd.Timestamp:
+    return _utc(ts).normalize() + pd.Timedelta(days=1) - pd.Timedelta(milliseconds=1)
+
+
+def _month_end(ts: pd.Timestamp) -> pd.Timestamp:
+    return (_utc(ts) + pd.offsets.MonthEnd(0)).normalize()
 
 
 def history_buffer_days(config: UniverseConfig | None = None) -> int:
@@ -319,22 +333,23 @@ def download_funding_stage(
     contract_by_asset: dict[str, ContractDownload],
     *,
     data_dir: str | Path,
-    fetcher=fetch_funding_rate_history,
+    fetcher=fetch_binance_vision_funding,
     exchange=None,
+    session=None,
 ) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    del exchange  # Backtest-period funding uses Binance Vision archives by policy.
     downloaded: list[str] = []
     skipped: list[str] = []
     failures: list[dict[str, Any]] = []
+    client_session = session or requests.Session()
     for i, asset_id in enumerate(pool_asset_ids, start=1):
         contract = contract_by_asset[asset_id]
-        if contract.data_source != "okx":
-            print(f"Stage D [{i}/{len(pool_asset_ids)}] skip funding {asset_id} source=binance_vision")
-            skipped.append(asset_id)
-            continue
+        binance_symbol = contract.binance_symbol or to_binance_usdt_symbol(contract.symbol)
+        funding_end = _end_of_day(contract.fetch_end)
         missing = missing_funding_range(
             asset_id,
             contract.fetch_start,
-            contract.fetch_end,
+            funding_end,
             data_dir=data_dir,
         )
         if missing is None:
@@ -342,11 +357,16 @@ def download_funding_stage(
             downloaded.append(asset_id)
             continue
         since, until = missing
-        print(f"Stage D [{i}/{len(pool_asset_ids)}] funding {asset_id} {_date(since)}..{_date(until)}")
+        print(
+            f"Stage D [{i}/{len(pool_asset_ids)}] funding {asset_id} "
+            f"{_date(since)}..{_date(until)} binance_symbol={binance_symbol}"
+        )
         try:
-            df = fetcher(contract.symbol, since=since, until=until, exchange=exchange)
+            df = fetcher(binance_symbol, since=since, until=until, session=client_session)
             if df.empty:
-                raise ValueError("empty funding response")
+                print(f"Stage D [{i}/{len(pool_asset_ids)}] funding archive gap {asset_id}")
+                skipped.append(asset_id)
+                continue
             save_funding(df, symbol=asset_id, data_dir=data_dir)
             downloaded.append(asset_id)
         except Exception as exc:  # noqa: BLE001 - keep the batch moving
@@ -355,7 +375,7 @@ def download_funding_stage(
                 {
                     "stage": "funding",
                     "asset_id": asset_id,
-                    "symbol": contract.symbol,
+                    "symbol": binance_symbol,
                     "since": _iso(since),
                     "until": _iso(until),
                     "error": str(exc),
@@ -400,6 +420,70 @@ def _gap_stats(
     }
 
 
+def _in_pool_days_by_asset(
+    universe_history: dict[pd.Timestamp, list[str]],
+    *,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> dict[str, set[pd.Timestamp]]:
+    start_day = _utc(start).normalize()
+    end_day = _utc(end).normalize()
+    out: dict[str, set[pd.Timestamp]] = {}
+    for month, members in universe_history.items():
+        month_start = _utc(month).normalize()
+        window_start = max(month_start, start_day)
+        window_end = min(_month_end(month_start), end_day)
+        if window_end < window_start:
+            continue
+        days = set(pd.date_range(window_start, window_end, freq="D", tz="UTC"))
+        for asset_id in members:
+            out.setdefault(asset_id, set()).update(days)
+    return out
+
+
+def funding_coverage_stats(
+    pool_asset_ids: list[str],
+    universe_history: dict[pd.Timestamp, list[str]],
+    *,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    data_dir: str | Path,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    in_pool_days = _in_pool_days_by_asset(universe_history, start=start, end=end)
+    rows: list[dict[str, Any]] = []
+    total_in_pool_days = 0
+    total_covered_days = 0
+    total_rows = 0
+    for asset_id in sorted(pool_asset_ids):
+        days = in_pool_days.get(asset_id, set())
+        funding = load_funding(asset_id, start=start, end=_end_of_day(end), data_dir=data_dir)
+        funding_days = set(funding.index.normalize()) if not funding.empty else set()
+        covered_days = len(days & funding_days)
+        in_pool_count = len(days)
+        total_in_pool_days += in_pool_count
+        total_covered_days += covered_days
+        total_rows += int(len(funding))
+        fraction = None if in_pool_count == 0 else covered_days / in_pool_count
+        rows.append(
+            {
+                "asset_id": asset_id,
+                "in_pool_days": in_pool_count,
+                "covered_days": covered_days,
+                "coverage_fraction": fraction,
+                "funding_rows": int(len(funding)),
+                "first_funding": None if funding.empty else _date(funding.index[0]),
+                "last_funding": None if funding.empty else _date(funding.index[-1]),
+            }
+        )
+    aggregate = {
+        "in_pool_days": total_in_pool_days,
+        "covered_days": total_covered_days,
+        "coverage_fraction": None if total_in_pool_days == 0 else total_covered_days / total_in_pool_days,
+        "funding_rows": total_rows,
+    }
+    return rows, aggregate
+
+
 def validate_downloads(
     asset_ids: list[str],
     universe_history: dict[pd.Timestamp, list[str]],
@@ -409,10 +493,15 @@ def validate_downloads(
     report_path: str | Path,
     config: UniverseConfig | None = None,
     expected_ranges: dict[str, tuple[pd.Timestamp, pd.Timestamp]] | None = None,
+    funding_pool_asset_ids: list[str] | None = None,
+    funding_start: pd.Timestamp | None = None,
+    funding_end: pd.Timestamp | None = None,
 ) -> ValidationReport:
     config = config or UniverseConfig()
     combined = ValidationReport()
     per_asset: dict[str, dict[str, Any]] = {}
+    funding_rows: list[dict[str, Any]] = []
+    funding_aggregate: dict[str, Any] | None = None
 
     for asset_id in asset_ids:
         df = load_ohlcv(asset_id, data_dir=data_dir)
@@ -445,6 +534,24 @@ def validate_downloads(
     delisted_report = check_delisted_symbol_coverage(calendar)
     combined.extend(universe_report)
     combined.extend(delisted_report)
+
+    if funding_pool_asset_ids is not None and funding_start is not None and funding_end is not None:
+        funding_rows, funding_aggregate = funding_coverage_stats(
+            funding_pool_asset_ids,
+            universe_history,
+            start=funding_start,
+            end=funding_end,
+            data_dir=data_dir,
+        )
+        for row in funding_rows:
+            if row["in_pool_days"] and row["covered_days"] < row["in_pool_days"]:
+                fraction = row["coverage_fraction"]
+                combined.add_warning(
+                    f"[{row['asset_id']}] funding coverage "
+                    f"{0.0 if fraction is None else fraction:.4f} "
+                    f"({row['covered_days']}/{row['in_pool_days']} in-pool days); "
+                    "missing archive days treated as 0"
+                )
 
     path = Path(report_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -479,6 +586,34 @@ def validate_downloads(
             f"{'' if missing is None else missing} | {len(item['errors'])} | "
             f"{len(item['warnings'])} |"
         )
+
+    if funding_aggregate is not None:
+        coverage = funding_aggregate["coverage_fraction"]
+        lines.extend(
+            [
+                "",
+                "## Funding Coverage",
+                "",
+                "Funding uses Binance Vision monthly fundingRate archives for all pool assets. "
+                "Archive gaps are warning-level; downstream research treats missing funding as 0. "
+                "Trailing partial months can lag archive publication.",
+                "",
+                f"Aggregate in-pool day coverage: "
+                f"{'n/a' if coverage is None else f'{coverage:.4f}'} "
+                f"({funding_aggregate['covered_days']}/{funding_aggregate['in_pool_days']} days, "
+                f"{funding_aggregate['funding_rows']} rows)",
+                "",
+                "| asset_id | in_pool_days | covered_days | coverage_fraction | funding_rows | first_funding | last_funding |",
+                "|---|---:|---:|---:|---:|---|---|",
+            ]
+        )
+        for row in funding_rows:
+            fraction = row["coverage_fraction"]
+            lines.append(
+                f"| {row['asset_id']} | {row['in_pool_days']} | {row['covered_days']} | "
+                f"{'' if fraction is None else f'{fraction:.4f}'} | {row['funding_rows']} | "
+                f"{row['first_funding']} | {row['last_funding']} |"
+            )
 
     if combined.errors:
         lines.extend(["", "## Errors", ""])
@@ -616,13 +751,26 @@ def funding_depth_diagnostics(
     asset_ids: list[str],
     *,
     data_dir: str | Path,
-    expected_start: pd.Timestamp,
+    expected_start: pd.Timestamp | None = None,
+    expected_starts: dict[str, pd.Timestamp] | None = None,
 ) -> list[dict[str, Any]]:
     diagnostics: list[dict[str, Any]] = []
     for asset_id in asset_ids:
+        target_start = None if expected_starts is None else expected_starts.get(asset_id)
+        target_start = expected_start if target_start is None else target_start
         df = load_funding(asset_id, data_dir=data_dir)
         if df.empty:
-            diagnostics.append({"asset_id": asset_id, "rows": 0, "first": None, "max_gap_hours": None})
+            diagnostics.append(
+                {
+                    "asset_id": asset_id,
+                    "rows": 0,
+                    "expected_start": None if target_start is None else _date(target_start),
+                    "first": None,
+                    "last": None,
+                    "reaches_expected_start": False,
+                    "max_gap_hours": None,
+                }
+            )
             continue
         diffs = df.index.to_series().diff().dropna()
         max_gap = None if diffs.empty else float(diffs.max() / pd.Timedelta(hours=1))
@@ -630,9 +778,12 @@ def funding_depth_diagnostics(
             {
                 "asset_id": asset_id,
                 "rows": int(len(df)),
+                "expected_start": None if target_start is None else _date(target_start),
                 "first": _date(df.index[0]),
                 "last": _date(df.index[-1]),
-                "reaches_expected_start": _utc(df.index[0]) <= expected_start + FUNDING_STEP,
+                "reaches_expected_start": (
+                    True if target_start is None else _utc(df.index[0]) <= _utc(target_start) + FUNDING_STEP
+                ),
                 "max_gap_hours": max_gap,
             }
         )
@@ -641,11 +792,114 @@ def funding_depth_diagnostics(
 
 def append_funding_diagnostics_to_report(report_path: str | Path, diagnostics: list[dict[str, Any]]) -> None:
     lines = ["", "## Funding Depth Diagnostics", ""]
-    lines.extend(["| asset_id | rows | first | last | reaches start | max gap hours |", "|---|---:|---|---|---|---:|"])
+    lines.extend(
+        [
+            "| asset_id | rows | expected_start | first | last | reaches start | max gap hours |",
+            "|---|---:|---|---|---|---|---:|",
+        ]
+    )
     for item in diagnostics:
         lines.append(
-            f"| {item['asset_id']} | {item['rows']} | {item.get('first')} | {item.get('last')} | "
-            f"{item.get('reaches_expected_start')} | {item.get('max_gap_hours')} |"
+            f"| {item['asset_id']} | {item['rows']} | {item.get('expected_start')} | "
+            f"{item.get('first')} | {item.get('last')} | {item.get('reaches_expected_start')} | "
+            f"{item.get('max_gap_hours')} |"
+        )
+    path = Path(report_path)
+    with path.open("a", encoding="utf-8") as fp:
+        fp.write("\n".join(lines) + "\n")
+
+
+FUNDING_ARCHIVE_PROBES = (
+    ("BTC archive start", "BTCUSDT", "2020-08-01", "2020-08-10", "2020-08-01"),
+    ("ETH archive start", "ETHUSDT", "2020-08-01", "2020-08-10", "2020-08-01"),
+    ("LUNA 2021 coverage", "LUNAUSDT", "2021-01-28", "2021-02-05", "2021-01-28"),
+    ("FTT pre-2022-04 gap", "FTTUSDT", "2021-09-01", "2022-04-10", "2021-09-01"),
+)
+
+
+def funding_archive_probe_diagnostics(
+    session=None,
+) -> list[dict[str, Any]]:
+    client_session = session or requests.Session()
+    diagnostics: list[dict[str, Any]] = []
+    for label, symbol, since, until, expected_start in FUNDING_ARCHIVE_PROBES:
+        start = _utc(since)
+        expected = _utc(expected_start)
+        try:
+            df = fetch_binance_vision_funding(
+                symbol,
+                since=since,
+                until=until,
+                session=client_session,
+            )
+        except Exception as exc:  # noqa: BLE001 - probe diagnostics should not mask prior report output
+            diagnostics.append(
+                {
+                    "label": label,
+                    "symbol": symbol,
+                    "rows": 0,
+                    "expected_start": _date(expected),
+                    "first": None,
+                    "last": None,
+                    "max_gap_hours": None,
+                    "start_gap_days": None,
+                    "error": str(exc),
+                }
+            )
+            continue
+
+        if df.empty:
+            diagnostics.append(
+                {
+                    "label": label,
+                    "symbol": symbol,
+                    "rows": 0,
+                    "expected_start": _date(expected),
+                    "first": None,
+                    "last": None,
+                    "max_gap_hours": None,
+                    "start_gap_days": None,
+                    "error": None,
+                }
+            )
+            continue
+
+        diffs = df.index.to_series().diff().dropna()
+        max_gap = None if diffs.empty else float(diffs.max() / pd.Timedelta(hours=1))
+        start_gap = max(0, int((_utc(df.index[0]).normalize() - start.normalize()).days))
+        diagnostics.append(
+            {
+                "label": label,
+                "symbol": symbol,
+                "rows": int(len(df)),
+                "expected_start": _date(expected),
+                "first": _date(df.index[0]),
+                "last": _date(df.index[-1]),
+                "max_gap_hours": max_gap,
+                "start_gap_days": start_gap,
+                "error": None,
+            }
+        )
+    return diagnostics
+
+
+def append_funding_archive_probes_to_report(
+    report_path: str | Path,
+    diagnostics: list[dict[str, Any]],
+) -> None:
+    lines = [
+        "",
+        "## Funding Archive Probes",
+        "",
+        "| probe | symbol | rows | expected_start | first | last | start_gap_days | max_gap_hours | error |",
+        "|---|---|---:|---|---|---|---:|---:|---|",
+    ]
+    for item in diagnostics:
+        lines.append(
+            f"| {item['label']} | {item['symbol']} | {item['rows']} | "
+            f"{item.get('expected_start')} | {item.get('first')} | {item.get('last')} | "
+            f"{item.get('start_gap_days')} | {item.get('max_gap_hours')} | "
+            f"{item.get('error')} |"
         )
     path = Path(report_path)
     with path.open("a", encoding="utf-8") as fp:
@@ -731,7 +985,7 @@ def main(argv: list[str] | None = None) -> int:
             data_dir=data_dir,
             exchange=okx_exchange,
         )
-        print(f"Stage D funding skipped binance_vision assets: {len(skipped_funding)}")
+        print(f"Stage D funding archive-gap assets: {len(skipped_funding)}")
         failures.extend(funding_failures)
         write_failures(failures, reports_dir=reports_dir)
 
@@ -744,6 +998,9 @@ def main(argv: list[str] | None = None) -> int:
         report_path=reports_dir / "download_validation.md",
         config=config,
         expected_ranges=expected_ohlcv_ranges,
+        funding_pool_asset_ids=None if args.skip_funding else pool_asset_ids,
+        funding_start=start,
+        funding_end=end,
     )
     print(validation.summary())
 
@@ -780,9 +1037,15 @@ def main(argv: list[str] | None = None) -> int:
         diagnostics = funding_depth_diagnostics(
             ["BTC-20191112", "ETH-20191112"],
             data_dir=data_dir,
-            expected_start=panel_start,
+            expected_starts={
+                "BTC-20191112": pd.Timestamp("2020-08-01", tz="UTC"),
+                "ETH-20191112": pd.Timestamp("2020-08-01", tz="UTC"),
+            },
         )
         append_funding_diagnostics_to_report(reports_dir / "trial_source_comparison.md", diagnostics)
+        archive_probes = funding_archive_probe_diagnostics()
+        append_funding_archive_probes_to_report(reports_dir / "trial_source_comparison.md", archive_probes)
+        print("Trial funding archive probes:", archive_probes)
         if not args.skip_funding:
             for item in diagnostics:
                 if item["rows"] == 0 or not item.get("reaches_expected_start"):
