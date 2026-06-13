@@ -1074,8 +1074,13 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Stage C building universe history")
     universe_history = build_universe_history(panel, start=start, end=end, calendar=calendar, config=config)
-    universe_path = write_universe_history(universe_history, data_dir=data_dir)
-    print(f"Stage C wrote {universe_path}")
+    if selected is not None:
+        # A --symbols debug subset yields a partial pool; never let it overwrite the
+        # canonical universe_history.json that downstream phases (and --revalidate) read.
+        print("Stage C SKIP write: --symbols subset would corrupt the full universe history")
+    else:
+        universe_path = write_universe_history(universe_history, data_dir=data_dir)
+        print(f"Stage C wrote {universe_path}")
     _print_universe_summary(universe_history, calendar)
 
     contract_by_asset = {contract.asset_id: contract for contract in contracts}
