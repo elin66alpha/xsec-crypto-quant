@@ -338,7 +338,7 @@ def fetch_ohlcv(
         empty_pages = 0
         rows.extend(batch)
         last_ts = batch[-1][0]
-        if last_ts >= until_ms or len(batch) < OHLCV_PAGE_LIMIT:
+        if last_ts >= until_ms:
             break
         cursor = last_ts + tf_ms  # 下一页从最后一根的下一根开始
         if exchange.rateLimit:

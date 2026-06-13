@@ -364,16 +364,39 @@ def download_funding_stage(
     return downloaded, skipped, failures
 
 
-def _gap_stats(df: pd.DataFrame) -> dict[str, Any]:
+def _gap_stats(
+    df: pd.DataFrame,
+    expected_range: tuple[pd.Timestamp, pd.Timestamp] | None = None,
+) -> dict[str, Any]:
+    expected_start, expected_end = (None, None) if expected_range is None else expected_range
     if df.empty:
-        return {"rows": 0, "start": None, "end": None, "missing_bars": None}
+        return {
+            "rows": 0,
+            "start": None,
+            "end": None,
+            "missing_bars": None,
+            "expected_start": _date(expected_start) if expected_start is not None else None,
+            "expected_end": _date(expected_end) if expected_end is not None else None,
+            "start_shortfall_days": None,
+            "end_shortfall_days": None,
+        }
     expected = pd.date_range(df.index.min(), df.index.max(), freq="D", tz="UTC")
     missing = expected.difference(df.index)
+    start_shortfall = None
+    end_shortfall = None
+    if expected_start is not None:
+        start_shortfall = max(0, int((_utc(df.index[0]) - _utc(expected_start)).days))
+    if expected_end is not None:
+        end_shortfall = max(0, int((_utc(expected_end) - _utc(df.index[-1])).days))
     return {
         "rows": int(len(df)),
         "start": _date(df.index[0]),
         "end": _date(df.index[-1]),
         "missing_bars": int(len(missing)),
+        "expected_start": _date(expected_start) if expected_start is not None else None,
+        "expected_end": _date(expected_end) if expected_end is not None else None,
+        "start_shortfall_days": start_shortfall,
+        "end_shortfall_days": end_shortfall,
     }
 
 
@@ -385,6 +408,7 @@ def validate_downloads(
     data_dir: str | Path,
     report_path: str | Path,
     config: UniverseConfig | None = None,
+    expected_ranges: dict[str, tuple[pd.Timestamp, pd.Timestamp]] | None = None,
 ) -> ValidationReport:
     config = config or UniverseConfig()
     combined = ValidationReport()
@@ -393,9 +417,21 @@ def validate_downloads(
     for asset_id in asset_ids:
         df = load_ohlcv(asset_id, data_dir=data_dir)
         rep = validate_ohlcv(df, timeframe="1d", symbol=asset_id)
+        stats = _gap_stats(df, None if expected_ranges is None else expected_ranges.get(asset_id))
+        if expected_ranges is not None and asset_id in expected_ranges:
+            if df.empty:
+                rep.add_error(f"[{asset_id}] coverage missing all expected data")
+            elif (stats["start_shortfall_days"] or 0) > 3 or (stats["end_shortfall_days"] or 0) > 3:
+                rep.add_error(
+                    f"[{asset_id}] coverage boundary shortfall exceeds 3 days "
+                    f"(expected {stats['expected_start']}~{stats['expected_end']}, "
+                    f"actual {stats['start']}~{stats['end']}, "
+                    f"start_shortfall={stats['start_shortfall_days']}, "
+                    f"end_shortfall={stats['end_shortfall_days']})"
+                )
         combined.extend(rep)
         per_asset[asset_id] = {
-            "stats": _gap_stats(df),
+            "stats": stats,
             "errors": rep.errors,
             "warnings": rep.warnings,
         }
@@ -429,14 +465,17 @@ def validate_downloads(
         "",
         "## Per-Asset Gap Stats",
         "",
-        "| asset_id | rows | start | end | missing_bars | errors | warnings |",
-        "|---|---:|---|---|---:|---:|---:|",
+        "| asset_id | rows | expected_start | actual_start | expected_end | actual_end | start_shortfall_days | end_shortfall_days | missing_bars | errors | warnings |",
+        "|---|---:|---|---|---|---|---:|---:|---:|---:|---:|",
     ]
     for asset_id, item in sorted(per_asset.items()):
         stats = item["stats"]
         missing = stats["missing_bars"]
         lines.append(
-            f"| {asset_id} | {stats['rows']} | {stats['start']} | {stats['end']} | "
+            f"| {asset_id} | {stats['rows']} | {stats['expected_start']} | {stats['start']} | "
+            f"{stats['expected_end']} | {stats['end']} | "
+            f"{'' if stats['start_shortfall_days'] is None else stats['start_shortfall_days']} | "
+            f"{'' if stats['end_shortfall_days'] is None else stats['end_shortfall_days']} | "
             f"{'' if missing is None else missing} | {len(item['errors'])} | "
             f"{len(item['warnings'])} |"
         )
@@ -675,6 +714,11 @@ def main(argv: list[str] | None = None) -> int:
     _print_universe_summary(universe_history, calendar)
 
     contract_by_asset = {contract.asset_id: contract for contract in contracts}
+    expected_ohlcv_ranges = {
+        contract.asset_id: (contract.fetch_start, contract.fetch_end)
+        for contract in contracts
+        if contract.asset_id in downloaded_asset_ids
+    }
     pool_asset_ids = sorted({asset_id for members in universe_history.values() for asset_id in members})
     funding_failures: list[dict[str, Any]] = []
     if args.skip_funding:
@@ -699,6 +743,7 @@ def main(argv: list[str] | None = None) -> int:
         data_dir=data_dir,
         report_path=reports_dir / "download_validation.md",
         config=config,
+        expected_ranges=expected_ohlcv_ranges,
     )
     print(validation.summary())
 

@@ -13,6 +13,7 @@ from scripts.download_history import (
     ContractDownload,
     build_dollar_volume_panel_from_storage,
     download_ohlcv_stage,
+    validate_downloads,
 )
 
 
@@ -165,3 +166,51 @@ def test_build_dollar_volume_panel_from_storage(tmp_path):
     assert panel.shape == (2, 2)
     assert panel.loc[pd.Timestamp("2022-01-01", tz="UTC"), "AAA-20200101"] == 1000.0
     assert panel.loc[pd.Timestamp("2022-01-02", tz="UTC"), "BBB-20200101"] == 1000.0
+
+
+def test_validate_downloads_errors_on_boundary_shortfall(tmp_path):
+    asset_id = "AAA-20200101"
+    save_ohlcv(_ohlcv("2021-01-01", periods=5), asset_id, data_dir=tmp_path)
+    delisted_rows = pd.DataFrame(
+        {
+            "symbol": [f"OLD{i}/USDT:USDT" for i in range(10)],
+            "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")] * 10,
+            "delisting_date": [pd.Timestamp("2023-01-01", tz="UTC")] * 10,
+            "data_source": ["binance_vision"] * 10,
+        },
+        index=[f"OLD{i}-20200101" for i in range(10)],
+    )
+    calendar = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "symbol": ["AAA/USDT:USDT"],
+                    "listing_date": [pd.Timestamp("2020-01-01", tz="UTC")],
+                    "delisting_date": [pd.NaT],
+                    "data_source": ["okx"],
+                },
+                index=[asset_id],
+            ),
+            delisted_rows,
+        ]
+    )
+
+    report = validate_downloads(
+        [asset_id],
+        {pd.Timestamp("2021-01-01", tz="UTC"): [asset_id]},
+        calendar,
+        data_dir=tmp_path,
+        report_path=tmp_path / "validation.md",
+        expected_ranges={
+            asset_id: (
+                pd.Timestamp("2021-01-01", tz="UTC"),
+                pd.Timestamp("2021-01-10", tz="UTC"),
+            )
+        },
+    )
+
+    assert not report.ok
+    assert any("coverage boundary shortfall" in error for error in report.errors)
+    text = (tmp_path / "validation.md").read_text(encoding="utf-8")
+    assert "expected_start" in text
+    assert "end_shortfall_days" in text

@@ -124,6 +124,53 @@ def test_fetch_ohlcv_dispatches_to_binance_vision_source():
     assert df["volume"].iloc[0] == 100.0
 
 
+class _ShortPageOkx:
+    rateLimit = 0
+
+    def __init__(self) -> None:
+        self.calls: list[int | None] = []
+
+    def parse_timeframe(self, timeframe: str) -> int:
+        assert timeframe == "1d"
+        return 86_400
+
+    def milliseconds(self) -> int:
+        return int(pd.Timestamp("2022-04-11", tz="UTC").timestamp() * 1000)
+
+    def fetch_ohlcv(self, symbol, timeframe, since=None, limit=None):
+        assert symbol == "AVAX/USDT:USDT"
+        assert timeframe == "1d"
+        assert limit == 100
+        self.calls.append(since)
+        first_day = pd.Timestamp("2022-01-01", tz="UTC")
+        if len(self.calls) == 1:
+            days = pd.date_range(first_day, periods=99, freq="D", tz="UTC")
+        elif len(self.calls) == 2:
+            days = pd.date_range(first_day + pd.Timedelta(days=99), periods=2, freq="D", tz="UTC")
+        else:
+            days = pd.DatetimeIndex([], tz="UTC")
+        return [
+            [int(day.timestamp() * 1000), 1.0, 2.0, 0.5, 1.5, 100.0]
+            for day in days
+        ]
+
+
+def test_okx_ohlcv_continues_after_short_non_final_page():
+    exchange = _ShortPageOkx()
+
+    df = fetch_ohlcv(
+        "AVAX/USDT:USDT",
+        since="2022-01-01",
+        until="2022-04-11",
+        exchange=exchange,
+        source="okx",
+    )
+
+    assert len(df) == 101
+    assert df.index[-1] == pd.Timestamp("2022-04-11", tz="UTC")
+    assert len(exchange.calls) == 2
+
+
 def test_binance_vision_requires_daily_bounded_requests():
     with pytest.raises(ValueError, match="1d"):
         fetch_binance_vision_ohlcv("FTTUSDT", timeframe="1h", since="2022-11-01")
