@@ -278,10 +278,36 @@ def test_validate_downloads_errors_on_boundary_shortfall(tmp_path):
     )
 
     assert not report.ok
-    assert any("coverage boundary shortfall" in error for error in report.errors)
+    assert any("coverage end shortfall" in error for error in report.errors)
     text = (tmp_path / "validation.md").read_text(encoding="utf-8")
     assert "expected_start" in text
     assert "end_shortfall_days" in text
+
+
+def test_validate_downloads_start_shortfall_is_warning_not_error(tmp_path):
+    # Data starts later than the calendar listing (data-source availability floor),
+    # but covers the recent end fully => disclosed warning, not a download-failure error.
+    asset_id = "AAA-20200101"
+    save_ohlcv(_ohlcv("2020-06-01", periods=10), asset_id, data_dir=tmp_path)
+    calendar = _calendar_with_delisted(asset_id)
+
+    report = validate_downloads(
+        [asset_id],
+        {pd.Timestamp("2020-06-01", tz="UTC"): [asset_id]},  # >90d after 2020-01-01 listing
+        calendar,
+        data_dir=tmp_path,
+        report_path=tmp_path / "validation.md",
+        expected_ranges={
+            asset_id: (
+                pd.Timestamp("2020-01-01", tz="UTC"),  # listing far before first bar
+                pd.Timestamp("2020-06-10", tz="UTC"),  # end matches actual last bar
+            )
+        },
+    )
+
+    assert report.ok  # no errors
+    assert any("start later than calendar listing" in w for w in report.warnings)
+    assert not any("end shortfall" in e for e in report.errors)
 
 
 def test_validate_downloads_reports_funding_coverage_as_warning(tmp_path):
