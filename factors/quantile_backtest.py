@@ -62,6 +62,29 @@ def quantile_returns(
     return pd.Series(means, name="mean_fwd_return")
 
 
+def daily_long_short_spread(
+    factor: pd.DataFrame,
+    forward_returns: pd.DataFrame,
+    n_quantiles: int = DEFAULT_N_QUANTILES,
+) -> pd.Series:
+    """每日"顶层均值 − 底层均值"的前向收益价差序列。
+
+    这是**分层等权多空腿**（决策 6）的日度毛收益代理：做多最高分层（等权）、做空最低分层
+    （等权），赚两腿均值之差。与逐日 Spearman IC 不同，它按算术均值计，直接对应策略损益，
+    因此在加密极端偏态下可能与 IC 给出不同（甚至相反）的方向——这正是要并列检验的原因。
+
+    Returns
+    -------
+    Series
+        index = 日期，values = 当日 top−bottom 价差，name = ``ls_spread``。
+    """
+    q = assign_quantiles(factor, n_quantiles)
+    qa, fr = q.align(forward_returns, join="inner")
+    top = fr.where(qa == n_quantiles).mean(axis=1)
+    bottom = fr.where(qa == 1).mean(axis=1)
+    return (top - bottom).rename("ls_spread")
+
+
 def monotonicity(quantile_means: pd.Series) -> float:
     """层序号与各层平均收益的 Spearman 相关。+1=完美单调递增,-1=单调递减,0=无序。"""
     valid = quantile_means.dropna()

@@ -8,6 +8,7 @@ import pytest
 
 from factors.quantile_backtest import (
     assign_quantiles,
+    daily_long_short_spread,
     long_short_spread,
     monotonicity,
     quantile_backtest,
@@ -80,6 +81,17 @@ def test_quantile_backtest_bundle(monotonic_case):
     res = quantile_backtest(factor, fwd, n_quantiles=5)
     assert set(res) == {"quantile_means", "monotonicity", "spread"}
     assert res["monotonicity"] == pytest.approx(1.0)
+
+
+def test_daily_long_short_spread_series(monotonic_case):
+    """每日 top−bottom 价差：单调正向案例下应逐日为正，时间均值≈标量 spread。"""
+    factor, fwd = monotonic_case
+    daily = daily_long_short_spread(factor, fwd, n_quantiles=5)
+    assert daily.name == "ls_spread"
+    assert (daily.dropna() > 0).all()  # 顶层每日均 > 底层
+    means = quantile_returns(factor, fwd, n_quantiles=5)
+    # 日度价差的时间均值应与"先时间平均再相减"的标量 spread 一致
+    assert daily.mean() == pytest.approx(long_short_spread(means), rel=1e-6)
 
 
 def test_monotonicity_empty():
