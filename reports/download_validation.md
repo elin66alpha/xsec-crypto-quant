@@ -3,7 +3,7 @@
 Overall: PASS
 OHLCV assets checked: 803
 Validation errors: 0
-Validation warnings: 99
+Validation warnings: 94
 
 ## Universe Checks
 
@@ -824,7 +824,7 @@ Validation warnings: 99
 
 Funding uses Binance Vision monthly fundingRate archives for all pool assets. Archive gaps are warning-level; downstream research treats missing funding as 0. Trailing partial months can lag archive publication.
 
-Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
+Aggregate in-pool day coverage: 0.9860 (64416/65329 days, 1244369 rows)
 
 | asset_id | in_pool_days | covered_days | coverage_fraction | funding_rows | first_funding | last_funding |
 |---|---:|---:|---:|---:|---|---|
@@ -892,7 +892,7 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 | BNT-20230810 | 31 | 31 | 1.0000 | 3078 | 2023-08-10 | 2026-05-31 |
 | BNX-20220401 | 215 | 153 | 0.7116 | 2998 | 2023-02-01 | 2025-06-19 |
 | BOND-20231015 | 31 | 31 | 1.0000 | 3677 | 2023-10-15 | 2025-06-19 |
-| BONK-20240108 | 92 | 0 | 0.0000 | 0 | None | None |
+| BONK-20240108 | 92 | 92 | 1.0000 | 5250 | 2024-01-08 | 2026-05-31 |
 | BROCCOLI714-20250321 | 28 | 28 | 1.0000 | 2654 | 2025-03-21 | 2026-05-31 |
 | BTC-20191112 | 2296 | 2283 | 0.9943 | 7029 | 2020-01-01 | 2026-05-31 |
 | BTT-20210406 | 92 | 87 | 0.9457 | 887 | 2021-04-06 | 2022-01-26 |
@@ -938,7 +938,7 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 | FET-20230117 | 702 | 702 | 1.0000 | 3693 | 2023-01-17 | 2026-05-31 |
 | FHE-20250412 | 59 | 59 | 1.0000 | 2486 | 2025-04-12 | 2026-05-31 |
 | FLM-20200929 | 216 | 216 | 1.0000 | 8483 | 2020-09-29 | 2025-11-21 |
-| FLOKI-20230220 | 91 | 0 | 0.0000 | 0 | None | None |
+| FLOKI-20230220 | 91 | 91 | 1.0000 | 3364 | 2023-05-06 | 2026-05-31 |
 | FOOTBALL-20220901 | 31 | 31 | 1.0000 | 1908 | 2022-09-01 | 2024-05-28 |
 | FORM-20250319 | 30 | 30 | 1.0000 | 2632 | 2025-03-19 | 2026-05-31 |
 | FRONT-20230922 | 60 | 60 | 1.0000 | 1066 | 2023-09-22 | 2024-09-11 |
@@ -992,7 +992,7 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 | LSK-20240125 | 31 | 31 | 1.0000 | 6083 | 2024-01-25 | 2026-05-31 |
 | LTC-20191112 | 1916 | 1916 | 1.0000 | 7004 | 2020-01-09 | 2026-05-31 |
 | LUNA-20210128 | 396 | 378 | 0.9545 | 1410 | 2021-01-28 | 2022-05-13 |
-| LUNA-20220528 | 92 | 0 | 0.0000 | 0 | None | None |
+| LUNA-20220528 | 92 | 92 | 1.0000 | 5161 | 2022-09-10 | 2026-05-31 |
 | LUNA2-20220910 | 152 | 152 | 1.0000 | 5161 | 2022-09-10 | 2026-05-31 |
 | LYN-20251006 | 30 | 30 | 1.0000 | 1925 | 2025-10-06 | 2026-05-31 |
 | MAGIC-20230202 | 61 | 61 | 1.0000 | 4861 | 2023-02-02 | 2026-05-31 |
@@ -1026,7 +1026,7 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 | PAXG-20250327 | 212 | 212 | 1.0000 | 2584 | 2025-03-27 | 2026-05-31 |
 | PENGU-20241217 | 122 | 122 | 1.0000 | 3182 | 2024-12-17 | 2026-05-31 |
 | PEOPLE-20211202 | 457 | 457 | 1.0000 | 4861 | 2021-12-23 | 2026-05-31 |
-| PEPE-20230503 | 957 | 0 | 0.0000 | 0 | None | None |
+| PEPE-20230503 | 957 | 944 | 0.9864 | 3367 | 2023-05-05 | 2026-05-31 |
 | PERP-20230306 | 31 | 31 | 1.0000 | 5288 | 2023-03-06 | 2025-11-21 |
 | PHB-20230216 | 30 | 30 | 1.0000 | 3566 | 2023-02-16 | 2026-05-19 |
 | PI-20250220 | 61 | 0 | 0.0000 | 0 | None | None |
@@ -1056,10 +1056,10 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 | RVN-20210423 | 31 | 31 | 1.0000 | 7450 | 2021-04-23 | 2026-05-31 |
 | SAGA-20240409 | 122 | 122 | 1.0000 | 4697 | 2024-04-09 | 2026-05-31 |
 | SAND-20210402 | 152 | 152 | 1.0000 | 5658 | 2021-04-02 | 2026-05-31 |
-| SATS-20231218 | 123 | 0 | 0.0000 | 0 | None | None |
+| SATS-20231218 | 123 | 123 | 1.0000 | 5376 | 2023-12-18 | 2026-05-31 |
 | SENT-20251114 | 31 | 31 | 1.0000 | 1669 | 2025-11-14 | 2026-05-31 |
 | SFP-20210224 | 153 | 153 | 1.0000 | 5768 | 2021-02-24 | 2026-05-31 |
-| SHIB-20210509 | 759 | 0 | 0.0000 | 0 | None | None |
+| SHIB-20210509 | 759 | 759 | 1.0000 | 5542 | 2021-05-10 | 2026-05-31 |
 | SIREN-20250322 | 92 | 92 | 1.0000 | 3084 | 2025-03-22 | 2026-05-31 |
 | SKL-20201208 | 152 | 152 | 1.0000 | 6753 | 2020-12-08 | 2026-05-31 |
 | SKYAI-20250513 | 31 | 31 | 1.0000 | 2301 | 2025-05-13 | 2026-05-31 |
@@ -1181,7 +1181,6 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 - [BEAT-20251112] funding coverage 0.6977 (30/43 in-pool days); missing archive days treated as 0
 - [BNB-20221223] funding coverage 0.9724 (458/471 in-pool days); missing archive days treated as 0
 - [BNX-20220401] funding coverage 0.7116 (153/215 in-pool days); missing archive days treated as 0
-- [BONK-20240108] funding coverage 0.0000 (0/92 in-pool days); missing archive days treated as 0
 - [BTC-20191112] funding coverage 0.9943 (2283/2296 in-pool days); missing archive days treated as 0
 - [BTT-20210406] funding coverage 0.9457 (87/92 in-pool days); missing archive days treated as 0
 - [CORE-20230208] funding coverage 0.0000 (0/31 in-pool days); missing archive days treated as 0
@@ -1191,7 +1190,6 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 - [EDEN-20250930] funding coverage 0.0000 (0/13 in-pool days); missing archive days treated as 0
 - [EOS-20200108] funding coverage 0.9941 (1694/1704 in-pool days); missing archive days treated as 0
 - [ETH-20191112] funding coverage 0.9943 (2283/2296 in-pool days); missing archive days treated as 0
-- [FLOKI-20230220] funding coverage 0.0000 (0/91 in-pool days); missing archive days treated as 0
 - [H-20250703] funding coverage 0.8762 (92/105 in-pool days); missing archive days treated as 0
 - [HIFI-20230916] funding coverage 0.0968 (3/31 in-pool days); missing archive days treated as 0
 - [HYPE-20250221] funding coverage 0.9590 (304/317 in-pool days); missing archive days treated as 0
@@ -1201,16 +1199,13 @@ Aggregate in-pool day coverage: 0.9539 (62315/65329 days, 1216309 rows)
 - [LINK-20200228] funding coverage 0.9889 (1155/1168 in-pool days); missing archive days treated as 0
 - [LIT-20251224] funding coverage 0.0000 (0/13 in-pool days); missing archive days treated as 0
 - [LUNA-20210128] funding coverage 0.9545 (378/396 in-pool days); missing archive days treated as 0
-- [LUNA-20220528] funding coverage 0.0000 (0/92 in-pool days); missing archive days treated as 0
 - [MATIC-20201022] funding coverage 0.9855 (1291/1310 in-pool days); missing archive days treated as 0
 - [NEAR-20201221] funding coverage 0.9422 (212/225 in-pool days); missing archive days treated as 0
 - [ONDO-20240806] funding coverage 0.7045 (31/44 in-pool days); missing archive days treated as 0
-- [PEPE-20230503] funding coverage 0.0000 (0/957 in-pool days); missing archive days treated as 0
+- [PEPE-20230503] funding coverage 0.9864 (944/957 in-pool days); missing archive days treated as 0
 - [PI-20250220] funding coverage 0.0000 (0/61 in-pool days); missing archive days treated as 0
 - [RAVE-20251215] funding coverage 0.7045 (31/44 in-pool days); missing archive days treated as 0
 - [RNDR-20230203] funding coverage 0.9964 (275/276 in-pool days); missing archive days treated as 0
-- [SATS-20231218] funding coverage 0.0000 (0/123 in-pool days); missing archive days treated as 0
-- [SHIB-20210509] funding coverage 0.0000 (0/759 in-pool days); missing archive days treated as 0
 - [SOL-20210122] funding coverage 0.9927 (1765/1778 in-pool days); missing archive days treated as 0
 - [SUI-20230505] funding coverage 0.9824 (727/740 in-pool days); missing archive days treated as 0
 - [TAO-20240920] funding coverage 0.6977 (30/43 in-pool days); missing archive days treated as 0

@@ -36,6 +36,8 @@
 - 日历主键是唯一 `asset_id`（如 `LUNA-20190726` 与 `LUNA-20220528`），不是裸交易所 symbol。LUNA 符号已确认复用：OKX 当前 `LUNA-USDT-SWAP` 最早数据为 2022-05-28，属于新 LUNA；旧 LUNA 的 Binance `LUNAUSDT` 2022-05-01 归档存在，但 2022-06-01 返回 404。两代资产严禁拼接成一条价格序列。
 - 探测结果显示，OKX 对旧 LUNA/FTT/SRM/ANC 等已下架合约的历史 K 线和 funding REST 请求返回业务错误或不覆盖旧代际；因此这些样本的 OHLCV 走 Binance Vision USDT-M daily/monthly klines 归档 fallback。
 - **Funding 口径更新（2026-06-13 用户确认）**：OKX REST funding 回溯深度约 3 个月，不足以覆盖 2020+ 回测。为避免 OKX/Binance funding 拼接造成额外错位，回测期所有进池 asset_id 的 funding 统一采用 Binance Vision monthly `fundingRate` 归档；缺失 archive 月份视为 coverage gap，不是下载失败。研究中缺失 funding 按 0 处理：若真实 funding 为正，低估多头付费/空头收款；若真实 funding 为负，低估多头收款/空头付费。该有界偏差必须在 validation/report 中披露，并从 Phase 6 起用 OKX live funding 记录验证实时一致性。
+- **Funding 符号解析（2026-06-13，全量下载后修复）**：OKX 对小面值币按 1x 计价（如 `SHIB-USDT-SWAP`），Binance 期货仅发布 1000x 打包合约（`1000SHIBUSDT`）。funding **rate** 是名义价值的百分比、与合约乘数无关，故 1000x 归档对 OKX 1x 资产有效（与上一条 Binance-近似口径一致）。`download_funding_stage` 按 `[日历 binance_symbol, {BASE}USDT, 1000{BASE}USDT]` 顺序回退取第一个有数据的。由此恢复 SHIB/SATS/BONK/FLOKI/PEPE 的全历史 funding（此前 0 覆盖）。LUNA 2.0（`LUNA-20220528`，崩盘后新链）在 Binance 为 `LUNA2USDT`（非 `LUNAUSDT`=旧 LUNC），已在日历 `binance_symbol` 字段显式覆盖。
+- **仍 0 funding 覆盖的进池资产（已确认、按 0 披露）**：① 当月 trailing-lag（ALLO/EDEN/INJ/LAB/LIT/XAG，仅 2026-06 在池，archive 尚未发布，不影响 IS/VAL）；② Binance 无对应合约（CORE/CRO/LEND/PI/TLM，各 1–5 个在池月，实测 in-pool 月份 404）。二者 carry 因子与 funding PnL 均按 0 处理，影响范围已量化在 `reports/download_validation.md` 的 Funding Coverage 段。
 - 早期年份仍不能声称“完整无偏”：当前日历是代表性退市样本，不是完整退市合约全集。`data.validate.check_required_historical_members` 用于阻止 2021/2022 样本完全没有现已退市代表 `asset_id` 的情况。
 
 ## 进入阶段 1 的结论

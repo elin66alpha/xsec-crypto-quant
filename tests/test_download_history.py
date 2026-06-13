@@ -206,7 +206,7 @@ def test_download_funding_stage_uses_binance_archives_for_all_pool_assets(tmp_pa
     def fake_fetcher(symbol, since, until, session=None):
         del since, until, session
         calls.append(symbol)
-        if symbol == "GAPUSDT":
+        if symbol in ("GAPUSDT", "1000GAPUSDT"):  # genuinely absent on Binance
             return pd.DataFrame(columns=["fundingRate"], index=pd.DatetimeIndex([], name="datetime"))
         return _funding("2021-01-01", periods=2)
 
@@ -250,12 +250,52 @@ def test_download_funding_stage_uses_binance_archives_for_all_pool_assets(tmp_pa
         fetcher=fake_fetcher,
     )
 
-    assert calls == ["BTCUSDT", "LUNAUSDT", "GAPUSDT"]
+    # GAP has no funding under either GAPUSDT or the 1000x bundle => archive gap.
+    assert calls == ["BTCUSDT", "LUNAUSDT", "GAPUSDT", "1000GAPUSDT"]
     assert downloaded == ["BTC-20191112", "LUNA-20190726"]
     assert skipped == ["GAP-20200101"]
     assert failures == []
     assert len(load_funding("BTC-20191112", data_dir=tmp_path)) == 2
     assert len(load_funding("LUNA-20190726", data_dir=tmp_path)) == 2
+
+
+def test_download_funding_stage_falls_back_to_1000x_symbol(tmp_path):
+    # OKX trades SHIB at 1x; Binance only publishes 1000SHIBUSDT funding. The
+    # multiplier-invariant rate must be recovered via the 1000x fallback.
+    calls: list[str] = []
+
+    def fake_fetcher(symbol, since, until, session=None):
+        del since, until, session
+        calls.append(symbol)
+        if symbol == "1000SHIBUSDT":
+            return _funding("2021-06-01", periods=3)
+        return pd.DataFrame(columns=["fundingRate"], index=pd.DatetimeIndex([], name="datetime"))
+
+    contracts = {
+        "SHIB-20210509": ContractDownload(
+            asset_id="SHIB-20210509",
+            symbol="SHIB/USDT:USDT",
+            data_source="okx",
+            binance_symbol=None,
+            listing_date=pd.Timestamp("2021-05-09", tz="UTC"),
+            delisting_date=None,
+            fetch_start=pd.Timestamp("2021-06-01", tz="UTC"),
+            fetch_end=pd.Timestamp("2021-06-03", tz="UTC"),
+        ),
+    }
+
+    downloaded, skipped, failures = download_funding_stage(
+        ["SHIB-20210509"],
+        contracts,
+        data_dir=tmp_path,
+        fetcher=fake_fetcher,
+    )
+
+    assert calls == ["SHIBUSDT", "1000SHIBUSDT"]  # tried plain first, then 1000x
+    assert downloaded == ["SHIB-20210509"]
+    assert skipped == []
+    assert failures == []
+    assert len(load_funding("SHIB-20210509", data_dir=tmp_path)) == 3
 
 
 def test_validate_downloads_errors_on_boundary_shortfall(tmp_path):

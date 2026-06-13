@@ -333,6 +333,30 @@ def count_delisted_members(members: list[str], calendar: pd.DataFrame) -> int:
     return int(rows["delisting_date"].notna().sum())
 
 
+def binance_funding_symbol_candidates(contract: ContractDownload) -> list[str]:
+    """Ordered Binance funding symbols to try for one asset.
+
+    OKX trades small-value coins at 1x (e.g. SHIB-USDT-SWAP) but Binance only
+    publishes the 1000x-bundled contract (1000SHIBUSDT). The funding *rate* is a
+    percentage of notional and is invariant to the contract multiplier, so the
+    1000x archive is a valid funding source for the OKX 1x asset (consistent with
+    the already-accepted Binance-archive-as-bounded-approximation policy). We try
+    the calendar symbol, then the plain {BASE}USDT, then the 1000x bundle.
+    """
+    base = str(contract.symbol).split("/", maxsplit=1)[0]
+    candidates = [
+        contract.binance_symbol,
+        to_binance_usdt_symbol(contract.symbol),
+        f"{base}USDT",
+        f"1000{base}USDT",
+    ]
+    out: list[str] = []
+    for sym in candidates:
+        if sym and sym not in out:
+            out.append(sym)
+    return out
+
+
 def download_funding_stage(
     pool_asset_ids: list[str],
     contract_by_asset: dict[str, ContractDownload],
@@ -349,7 +373,7 @@ def download_funding_stage(
     client_session = session or requests.Session()
     for i, asset_id in enumerate(pool_asset_ids, start=1):
         contract = contract_by_asset[asset_id]
-        binance_symbol = contract.binance_symbol or to_binance_usdt_symbol(contract.symbol)
+        candidates = binance_funding_symbol_candidates(contract)
         funding_end = _end_of_day(contract.fetch_end)
         missing = missing_funding_range(
             asset_id,
@@ -364,14 +388,21 @@ def download_funding_stage(
         since, until = missing
         print(
             f"Stage D [{i}/{len(pool_asset_ids)}] funding {asset_id} "
-            f"{_date(since)}..{_date(until)} binance_symbol={binance_symbol}"
+            f"{_date(since)}..{_date(until)} candidates={candidates}"
         )
         try:
-            df = fetcher(binance_symbol, since=since, until=until, session=client_session)
+            used_symbol = candidates[0]
+            for sym in candidates:  # candidates is always non-empty
+                df = fetcher(sym, since=since, until=until, session=client_session)
+                used_symbol = sym
+                if not df.empty:
+                    break
             if df.empty:
                 print(f"Stage D [{i}/{len(pool_asset_ids)}] funding archive gap {asset_id}")
                 skipped.append(asset_id)
                 continue
+            if used_symbol != candidates[0]:
+                logger.info("Funding {} resolved via fallback symbol {}", asset_id, used_symbol)
             save_funding(df, symbol=asset_id, data_dir=data_dir)
             downloaded.append(asset_id)
         except Exception as exc:  # noqa: BLE001 - keep the batch moving
@@ -380,7 +411,7 @@ def download_funding_stage(
                 {
                     "stage": "funding",
                     "asset_id": asset_id,
-                    "symbol": binance_symbol,
+                    "symbol": used_symbol,
                     "since": _iso(since),
                     "until": _iso(until),
                     "error": str(exc),

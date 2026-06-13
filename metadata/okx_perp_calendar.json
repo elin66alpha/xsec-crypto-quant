@@ -5620,12 +5620,12 @@
     {
       "asset_id": "LUNA-20220528",
       "base": "LUNA",
-      "binance_symbol": null,
+      "binance_symbol": "LUNA2USDT",
       "data_source": "okx",
       "delisting_date": null,
       "inst_id": "LUNA-USDT-SWAP",
       "listing_date": "2022-05-28",
-      "notes": "current OKX public instruments snapshot",
+      "notes": "current OKX public instruments snapshot | binance funding symbol LUNA2USDT (post-crash LUNA 2.0; LUNAUSDT is old LUNC)",
       "quote": "USDT",
       "settle": "USDT",
       "symbol": "LUNA/USDT:USDT"
