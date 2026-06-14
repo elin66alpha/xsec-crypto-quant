@@ -41,7 +41,7 @@ DEFAULT_CORR_WINDOW = 30
 
 def equal_weight_pool_return(close: pd.DataFrame) -> pd.Series:
     """等权池日收益 = 各标的日收益的横截面均值（市场层面代理）。"""
-    return close.pct_change().mean(axis=1)
+    return close.pct_change(fill_method=None).mean(axis=1)
 
 
 def realized_vol(returns: pd.Series, window: int = DEFAULT_VOL_WINDOW) -> pd.Series:
@@ -90,7 +90,7 @@ def compute_market_features(
     无前视：每个特征都用 rolling/diff 向过去取窗口,某日特征不依赖未来。
     """
     pool_ret = equal_weight_pool_return(close)
-    daily_ret = close.pct_change()
+    daily_ret = close.pct_change(fill_method=None)
     feats = pd.DataFrame(
         {
             "market_vol": realized_vol(pool_ret, vol_window),
