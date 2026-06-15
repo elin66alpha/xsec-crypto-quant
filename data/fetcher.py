@@ -14,6 +14,7 @@ import csv
 import io
 import time
 import zipfile
+from collections.abc import Iterable
 
 import pandas as pd
 import requests
@@ -25,6 +26,10 @@ OHLCV_PAGE_LIMIT = 100
 FUNDING_PAGE_LIMIT = 100
 MAX_EMPTY_PAGES = 2  # 连续空页则停止，避免死循环
 BINANCE_VISION_BASE_URL = "https://data.binance.vision/data/futures/um/daily/klines"
+BINANCE_VISION_MONTHLY_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
+BINANCE_VISION_FUNDING_BASE_URL = "https://data.binance.vision/data/futures/um/monthly/fundingRate"
+BINANCE_VISION_RETRY_STATUS = {429, 500, 502, 503, 504}
+OKX_FUNDING_RATE_HISTORY_URL = "https://www.okx.com/api/v5/public/funding-rate-history"
 
 
 def make_okx_perp(exchange=None):
@@ -33,7 +38,15 @@ def make_okx_perp(exchange=None):
         return exchange
     import ccxt
 
-    return ccxt.okx({"enableRateLimit": True})
+    out = ccxt.okx({"enableRateLimit": True})
+
+    def _safe_keysort(dictionary):
+        # OKX can expose non-trading instruments that leave a None id in
+        # ccxt.markets_by_id; ccxt's default keysort cannot compare None to str.
+        return dict(sorted(dictionary.items(), key=lambda kv: "" if kv[0] is None else str(kv[0])))
+
+    out.keysort = _safe_keysort
+    return out
 
 
 def _to_ms(ts) -> int | None:
@@ -68,9 +81,41 @@ def to_binance_usdt_symbol(symbol: str) -> str:
     return symbol
 
 
+def to_okx_inst_id(symbol: str) -> str:
+    """把 ccxt/OKX 永续 symbol 映射成 OKX REST instrument id。"""
+    if "-" in symbol and symbol.endswith("-SWAP"):
+        return symbol
+    if "/" in symbol:
+        base, quote_part = symbol.split("/", maxsplit=1)
+        quote = quote_part.split(":", maxsplit=1)[0]
+        return f"{base}-{quote}-SWAP"
+    return symbol
+
+
 def _binance_vision_daily_url(symbol: str, timeframe: str, day: pd.Timestamp) -> str:
     day_str = day.strftime("%Y-%m-%d")
     return f"{BINANCE_VISION_BASE_URL}/{symbol}/{timeframe}/{symbol}-{timeframe}-{day_str}.zip"
+
+
+def _binance_vision_monthly_url(symbol: str, timeframe: str, month: pd.Timestamp) -> str:
+    month_str = month.strftime("%Y-%m")
+    return (
+        f"{BINANCE_VISION_MONTHLY_BASE_URL}/{symbol}/{timeframe}/"
+        f"{symbol}-{timeframe}-{month_str}.zip"
+    )
+
+
+def _binance_vision_funding_url(symbol: str, month: pd.Timestamp) -> str:
+    month_str = month.strftime("%Y-%m")
+    return f"{BINANCE_VISION_FUNDING_BASE_URL}/{symbol}/{symbol}-fundingRate-{month_str}.zip"
+
+
+def _month_end(day: pd.Timestamp) -> pd.Timestamp:
+    return (day + pd.offsets.MonthEnd(0)).normalize()
+
+
+def _iter_days(start_day: pd.Timestamp, end_day: pd.Timestamp) -> Iterable[pd.Timestamp]:
+    yield from pd.date_range(start_day, end_day, freq="D", tz="UTC")
 
 
 def _parse_binance_vision_zip(content: bytes) -> list[list[float | int]]:
@@ -97,18 +142,98 @@ def _parse_binance_vision_zip(content: bytes) -> list[list[float | int]]:
     return rows
 
 
+def _parse_binance_vision_funding_zip(content: bytes) -> list[dict[str, float | int]]:
+    """Parse Binance Vision fundingRate monthly zip files."""
+    rows: list[dict[str, float | int]] = []
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        for name in zf.namelist():
+            with zf.open(name) as fp:
+                reader = csv.DictReader(io.TextIOWrapper(fp, encoding="utf-8-sig"))
+                required = {"calc_time", "last_funding_rate"}
+                if reader.fieldnames is None or not required.issubset(set(reader.fieldnames)):
+                    raise ValueError(f"Binance Vision funding CSV columns unexpected: {reader.fieldnames}")
+                for row in reader:
+                    calc_time = row.get("calc_time")
+                    rate = row.get("last_funding_rate")
+                    if not calc_time or not rate:
+                        continue
+                    rows.append({"timestamp": int(calc_time), "fundingRate": float(rate)})
+            break
+    return rows
+
+
+def _get_with_retries(
+    client,
+    url: str,
+    *,
+    timeout: int = 30,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
+    params: dict[str, str] | None = None,
+):
+    """GET with simple exponential backoff for transient HTTP errors."""
+    last_response = None
+    for attempt in range(max_retries + 1):
+        if params is None:
+            response = client.get(url, timeout=timeout)
+        else:
+            response = client.get(url, params=params, timeout=timeout)
+        last_response = response
+        if response.status_code not in BINANCE_VISION_RETRY_STATUS:
+            return response
+        if attempt < max_retries:
+            sleep_for = backoff_seconds * (2 ** attempt)
+            logger.warning(
+                "Binance Vision transient HTTP {} for {}; retrying in {:.1f}s",
+                response.status_code,
+                url,
+                sleep_for,
+            )
+            time.sleep(sleep_for)
+    return last_response
+
+
+def _fetch_binance_daily_rows(
+    client,
+    symbol: str,
+    timeframe: str,
+    start_day: pd.Timestamp,
+    end_day: pd.Timestamp,
+    *,
+    max_retries: int,
+    backoff_seconds: float,
+) -> list[list[float | int]]:
+    rows: list[list[float | int]] = []
+    for day in _iter_days(start_day, end_day):
+        url = _binance_vision_daily_url(symbol, timeframe, day)
+        response = _get_with_retries(
+            client,
+            url,
+            max_retries=max_retries,
+            backoff_seconds=backoff_seconds,
+        )
+        if response.status_code == 404:
+            continue
+        response.raise_for_status()
+        rows.extend(_parse_binance_vision_zip(response.content))
+    return rows
+
+
 def fetch_binance_vision_ohlcv(
     symbol: str,
     timeframe: str = "1d",
     since=None,
     until=None,
     session=None,
+    use_monthly_archives: bool = True,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
 ) -> pd.DataFrame:
     """从 Binance Vision USDT-M daily klines 归档拉取退市合约 OHLCV。
 
-    这是 OKX 退市合约缺失历史 K 线时的显式 fallback。归档按自然日 zip 文件组织，
-    因此当前实现只支持有界的 ``1d`` 请求；调用方必须提供 ``since``，避免无意中
-    扫描全部历史。返回列与 OKX ``fetch_ohlcv`` 保持一致。
+    这是 OKX 退市合约缺失历史 K 线时的显式 fallback。完整自然月优先走
+    monthly zip，首尾不完整月份与 monthly 404 月份回退 daily zip；调用方必须
+    提供 ``since``，避免无意中扫描全部历史。返回列与 OKX ``fetch_ohlcv`` 保持一致。
     """
     if timeframe != "1d":
         raise ValueError("Binance Vision fallback 当前只支持 1d 日线")
@@ -122,15 +247,52 @@ def fetch_binance_vision_ohlcv(
         return _empty_ohlcv()
 
     binance_symbol = to_binance_usdt_symbol(symbol)
-    client = session or requests
+    client = session or requests.Session()
     rows: list[list[float | int]] = []
-    for day in pd.date_range(start_day, end_day, freq="D", tz="UTC"):
-        url = _binance_vision_daily_url(binance_symbol, timeframe, day)
-        response = client.get(url, timeout=30)
-        if response.status_code == 404:
+    day = start_day
+    one_day = pd.Timedelta(days=1)
+    while day <= end_day:
+        month_start = day.replace(day=1)
+        month_end = _month_end(day)
+        is_complete_month = day == month_start and month_end <= end_day
+        if use_monthly_archives and is_complete_month:
+            monthly_url = _binance_vision_monthly_url(binance_symbol, timeframe, day)
+            monthly_response = _get_with_retries(
+                client,
+                monthly_url,
+                max_retries=max_retries,
+                backoff_seconds=backoff_seconds,
+            )
+            if monthly_response.status_code == 404:
+                rows.extend(
+                    _fetch_binance_daily_rows(
+                        client,
+                        binance_symbol,
+                        timeframe,
+                        day,
+                        month_end,
+                        max_retries=max_retries,
+                        backoff_seconds=backoff_seconds,
+                    )
+                )
+            else:
+                monthly_response.raise_for_status()
+                rows.extend(_parse_binance_vision_zip(monthly_response.content))
+            day = month_end + one_day
             continue
-        response.raise_for_status()
-        rows.extend(_parse_binance_vision_zip(response.content))
+
+        rows.extend(
+            _fetch_binance_daily_rows(
+                client,
+                binance_symbol,
+                timeframe,
+                day,
+                day,
+                max_retries=max_retries,
+                backoff_seconds=backoff_seconds,
+            )
+        )
+        day += one_day
 
     if not rows:
         logger.warning("fetch_binance_vision_ohlcv: {} 无数据 (since={}, until={})", symbol, since, until)
@@ -149,6 +311,83 @@ def fetch_binance_vision_ohlcv(
         "fetch_binance_vision_ohlcv {} {}: {} 根 [{} ~ {}]",
         symbol,
         timeframe,
+        len(df),
+        df.index[0].date(),
+        df.index[-1].date(),
+    )
+    return df
+
+
+def fetch_binance_vision_funding(
+    symbol: str,
+    since=None,
+    until=None,
+    session=None,
+    max_retries: int = 3,
+    backoff_seconds: float = 0.5,
+) -> pd.DataFrame:
+    """Fetch Binance Vision USDT-M monthly fundingRate archives.
+
+    Missing monthly zip files are treated as coverage gaps, not request failures.
+    The returned shape matches ``fetch_funding_rate_history``: UTC datetime index
+    and a single ``fundingRate`` column.
+    """
+    start = _to_utc_timestamp(since)
+    if start is None:
+        raise ValueError("Binance Vision funding 必须提供 since")
+    end = _to_utc_timestamp(until) or pd.Timestamp.now(tz="UTC")
+    if end < start:
+        return _empty_funding()
+
+    start_month = start.normalize().replace(day=1)
+    end_month = end.normalize().replace(day=1)
+    binance_symbol = to_binance_usdt_symbol(symbol)
+    client = session or requests.Session()
+    rows: list[dict[str, float | int]] = []
+
+    for month in pd.date_range(start_month, end_month, freq="MS", tz="UTC"):
+        url = _binance_vision_funding_url(binance_symbol, month)
+        response = _get_with_retries(
+            client,
+            url,
+            max_retries=max_retries,
+            backoff_seconds=backoff_seconds,
+        )
+        if response.status_code == 404:
+            logger.info("Binance Vision funding archive missing: {}", url)
+            continue
+        response.raise_for_status()
+        rows.extend(_parse_binance_vision_funding_zip(response.content))
+
+    if not rows:
+        logger.warning(
+            "fetch_binance_vision_funding: {} 无数据 (since={}, until={})",
+            symbol,
+            since,
+            until,
+        )
+        return _empty_funding()
+
+    df = pd.DataFrame(rows)
+    df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    df = (
+        df.drop(columns="timestamp")
+        .drop_duplicates(subset="datetime")
+        .set_index("datetime")
+        .sort_index()
+    )
+    df = df.loc[(df.index >= start) & (df.index <= end)]
+    if df.empty:
+        logger.warning(
+            "fetch_binance_vision_funding: {} 无数据 (since={}, until={})",
+            symbol,
+            since,
+            until,
+        )
+        return _empty_funding()
+    logger.info(
+        "fetch_binance_vision_funding {}: {} 条 [{} ~ {}]",
+        symbol,
         len(df),
         df.index[0].date(),
         df.index[-1].date(),
@@ -202,7 +441,7 @@ def fetch_ohlcv(
         empty_pages = 0
         rows.extend(batch)
         last_ts = batch[-1][0]
-        if last_ts >= until_ms or len(batch) < OHLCV_PAGE_LIMIT:
+        if last_ts >= until_ms:
             break
         cursor = last_ts + tf_ms  # 下一页从最后一根的下一根开始
         if exchange.rateLimit:
@@ -230,6 +469,7 @@ def fetch_funding_rate_history(
     since=None,
     until=None,
     exchange=None,
+    session=None,
 ) -> pd.DataFrame:
     """分页拉取单标的 funding rate 历史（决策 3：carry 因子 + 损益结算项）。
 
@@ -238,29 +478,48 @@ def fetch_funding_rate_history(
     DataFrame
         index = datetime（UTC，资金费结算时点，通常每 8h 一次），列 ``fundingRate``。
     """
-    exchange = make_okx_perp(exchange)
-    cursor = _to_ms(since)
-    until_ms = _to_ms(until) or exchange.milliseconds()
+    del exchange  # direct REST avoids ccxt OKX funding cursor semantics.
+    start_ms = _to_ms(since) or 0
+    until_ms = _to_ms(until) or int(pd.Timestamp.now(tz="UTC").timestamp() * 1000)
+    client = session or requests.Session()
+    inst_id = to_okx_inst_id(symbol)
 
-    rows: list[dict] = []
-    empty_pages = 0
+    rows: list[dict[str, float | int]] = []
+    cursor: str | None = None
     while True:
-        batch = exchange.fetch_funding_rate_history(symbol, since=cursor, limit=FUNDING_PAGE_LIMIT)
-        batch = [r for r in batch if r["timestamp"] is not None and r["timestamp"] <= until_ms]
+        params = {"instId": inst_id, "limit": str(FUNDING_PAGE_LIMIT)}
+        if cursor is not None:
+            # OKX uses `after` to request records older than the cursor.
+            params["after"] = cursor
+        response = _get_with_retries(
+            client,
+            OKX_FUNDING_RATE_HISTORY_URL,
+            params=params,
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("code") != "0":
+            raise RuntimeError(f"OKX funding history error for {inst_id}: {payload}")
+        batch = payload.get("data", [])
         if not batch:
-            empty_pages += 1
-            if cursor is None or empty_pages >= MAX_EMPTY_PAGES:
-                break
-            cursor = (cursor or 0) + 8 * 3600 * 1000 * FUNDING_PAGE_LIMIT
-            continue
-        empty_pages = 0
-        rows.extend(batch)
-        last_ts = batch[-1]["timestamp"]
-        if last_ts >= until_ms or len(batch) < FUNDING_PAGE_LIMIT:
             break
-        cursor = last_ts + 1
-        if exchange.rateLimit:
-            time.sleep(exchange.rateLimit / 1000)
+
+        timestamps = [int(row["fundingTime"]) for row in batch if row.get("fundingTime") is not None]
+        for row in batch:
+            ts = int(row["fundingTime"])
+            if start_ms <= ts <= until_ms:
+                rows.append(
+                    {
+                        "timestamp": ts,
+                        "fundingRate": float(row.get("realizedRate") or row.get("fundingRate")),
+                    }
+                )
+        oldest = min(timestamps)
+        if oldest <= start_ms or len(batch) < FUNDING_PAGE_LIMIT:
+            break
+        cursor = str(oldest)
+        time.sleep(0.05)
 
     if not rows:
         logger.warning("fetch_funding_rate_history: {} 无数据", symbol)
@@ -302,3 +561,7 @@ def _empty_ohlcv() -> pd.DataFrame:
         columns=["open", "high", "low", "close", "volume"],
         index=pd.DatetimeIndex([], name="datetime"),
     )
+
+
+def _empty_funding() -> pd.DataFrame:
+    return pd.DataFrame(columns=["fundingRate"], index=pd.DatetimeIndex([], name="datetime"))

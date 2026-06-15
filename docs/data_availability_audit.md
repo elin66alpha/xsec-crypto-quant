@@ -9,7 +9,7 @@
 
 - 交易所：**OKX USDT 本位永续合约**（swap），通过 `ccxt`（`okx`）访问。
   - 交易所选择由 Binance 改为 **OKX**：本项目运行网络为美国 IP，Binance 全球站（`fapi.binance.com`）对美 IP 返回 **451「restricted location」**（合规封锁，非故障），而 OKX 永续公共接口可直连。CLAUDE.md 的统计诚实根决策（横截面/多空中性/动态池/FDR/locked holdout/杠杆红线）不受影响，仅交易所标的来源更换。
-- 数据全部走 REST（决策 B）：OHLCV、funding rate、合约信息。OKX 历史 K线/funding 单次最多返回 100 条，需分页（`data/fetcher.py` 已处理）。对 OKX 已下架且 REST 不再返回的早期合约，日线 K 线走 Binance Vision USDT-M daily klines 归档 fallback。
+- 数据全部走 REST / public archives（决策 B）：OHLCV、funding rate、合约信息。OKX 历史 K线单次最多返回 100 条，需分页（`data/fetcher.py` 已处理）。对 OKX 已下架且 REST 不再返回的早期合约，日线 K 线走 Binance Vision USDT-M daily/monthly klines 归档 fallback。回测期 funding 统一走 Binance Vision USDT-M monthly `fundingRate` 归档（2026-06-13 用户确认，见说明②）。
 - 时间口径：日频（1d）bar，UTC。信号用收盘后因子值，下一根 bar 开盘成交（决策 9）。
 
 ## 审计表
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|---|---|
 | **日线 OHLCV** | 截面动量、波动率、收益 | OKX swap；退市 fallback: Binance Vision | `fetch_ohlcv(source='okx'/'binance_vision')` | 各合约上市日；fallback 覆盖归档存在区间 | 免费，分页 REST / daily zip | ✅ | 进回测，数据层核心；退市合约按日历路由 fallback |
 | **成交量（base volume）** | 成交量变化因子、动态池排名 | OKX swap；退市 fallback: Binance Vision | OHLCV 第 6 列 | 同上 | 免费 | ✅ | 进回测；美元成交额≈`close×volume`（近似，见说明①） |
-| **Funding rate** | carry 因子（决策 3）+ 逐期损益结算 | OKX swap | `fetch_funding_rate_history` | 现存/仍可查询合约为 8h 历史；OKX 已下架合约通常不可取 | 免费，分页 REST | ✅/⚠️ | 现存合约进回测；退市 fallback 合约 funding 暂按 0 处理，必须披露方向性偏差（见说明②） |
+| **Funding rate** | carry 因子（决策 3）+ 逐期损益结算 | Binance Vision USDT-M fundingRate archive；OKX live funding 从 Phase 6 起记录 | `fetch_binance_vision_funding`（backtest）；`fetch_funding_rate_history`（OKX live/recent only） | Binance Vision monthly 归档实测覆盖 BTC/ETH 至 2020-08；单币以 archive 月份为准 | 免费，monthly zip；404 月份为 coverage gap | ✅/⚠️ | 回测期所有进池 asset_id 统一用 Binance funding 归档；缺失 archive 月/日按 0 处理并在 validation 披露；Phase 6 用 OKX live funding 做一致性验证 |
 | **合约元信息 / 永续日历** | 动态池候选集 | OKX instruments + 手工核验退市 fallback | `metadata/okx_perp_calendar.json` / `load_perp_calendar()` | 当前 OKX + 已核验退市样本 | 免费 | ⚠️ 见说明② | 进回测；动态池主键为 `asset_id`，优先用日历上市/退市日 |
 | **历史市值快照** | 动态池可选排名口径、BTC 主导率（regime） | CoinGecko | REST `/coins/markets` | 2013+ | 免费档有限速 | ✅ | 备用：本项目动态池以 OKX 成交额为主口径 |
 | **CVD / Trade Delta** | 订单流，**仅二次确认**（非主力） | OKX trades | `fetch_trades` | 理论可回溯但量极大、成本高 | 高（逐笔，TB 级） | ⚠️ 降级 | 暂不进历史回测；如需，仅"从现在起录制"，明确标注确认项 |
@@ -34,8 +34,10 @@
 应对：
 - 已提交小型永续日历 `metadata/okx_perp_calendar.json`，包含当前 OKX USDT 永续和核验过的退市 fallback 样本（旧 LUNA/FTT/SRM/ANC）。`data/universe.py` 优先使用日历上市/退市日，退市日只用于截断退市后的月份，不作为退市前的排序信号。
 - 日历主键是唯一 `asset_id`（如 `LUNA-20190726` 与 `LUNA-20220528`），不是裸交易所 symbol。LUNA 符号已确认复用：OKX 当前 `LUNA-USDT-SWAP` 最早数据为 2022-05-28，属于新 LUNA；旧 LUNA 的 Binance `LUNAUSDT` 2022-05-01 归档存在，但 2022-06-01 返回 404。两代资产严禁拼接成一条价格序列。
-- 探测结果显示，OKX 对旧 LUNA/FTT/SRM/ANC 等已下架合约的历史 K 线和 funding REST 请求返回业务错误或不覆盖旧代际；因此这些样本的 OHLCV 走 Binance Vision USDT-M daily klines 归档 fallback。
-- Binance Vision fallback 只补 K 线/成交量，不补 OKX funding。退市 fallback 合约在 funding PnL 和 carry 因子中暂按 0 funding 处理：若真实 funding 为正，低估多头付费/空头收款；若真实 funding 为负，低估多头收款/空头付费。任何使用这些样本的回测必须披露该方向性偏差。
+- 探测结果显示，OKX 对旧 LUNA/FTT/SRM/ANC 等已下架合约的历史 K 线和 funding REST 请求返回业务错误或不覆盖旧代际；因此这些样本的 OHLCV 走 Binance Vision USDT-M daily/monthly klines 归档 fallback。
+- **Funding 口径更新（2026-06-13 用户确认）**：OKX REST funding 回溯深度约 3 个月，不足以覆盖 2020+ 回测。为避免 OKX/Binance funding 拼接造成额外错位，回测期所有进池 asset_id 的 funding 统一采用 Binance Vision monthly `fundingRate` 归档；缺失 archive 月份视为 coverage gap，不是下载失败。研究中缺失 funding 按 0 处理：若真实 funding 为正，低估多头付费/空头收款；若真实 funding 为负，低估多头收款/空头付费。该有界偏差必须在 validation/report 中披露，并从 Phase 6 起用 OKX live funding 记录验证实时一致性。
+- **Funding 符号解析（2026-06-13，全量下载后修复）**：OKX 对小面值币按 1x 计价（如 `SHIB-USDT-SWAP`），Binance 期货仅发布 1000x 打包合约（`1000SHIBUSDT`）。funding **rate** 是名义价值的百分比、与合约乘数无关，故 1000x 归档对 OKX 1x 资产有效（与上一条 Binance-近似口径一致）。`download_funding_stage` 按 `[日历 binance_symbol, {BASE}USDT, 1000{BASE}USDT]` 顺序回退取第一个有数据的。由此恢复 SHIB/SATS/BONK/FLOKI/PEPE 的全历史 funding（此前 0 覆盖）。LUNA 2.0（`LUNA-20220528`，崩盘后新链）在 Binance 为 `LUNA2USDT`（非 `LUNAUSDT`=旧 LUNC），已在日历 `binance_symbol` 字段显式覆盖。
+- **仍 0 funding 覆盖的进池资产（已确认、按 0 披露）**：① 当月 trailing-lag（ALLO/EDEN/INJ/LAB/LIT/XAG，仅 2026-06 在池，archive 尚未发布，不影响 IS/VAL）；② Binance 无对应合约（CORE/CRO/LEND/PI/TLM，各 1–5 个在池月，实测 in-pool 月份 404）。二者 carry 因子与 funding PnL 均按 0 处理，影响范围已量化在 `reports/download_validation.md` 的 Funding Coverage 段。
 - 早期年份仍不能声称“完整无偏”：当前日历是代表性退市样本，不是完整退市合约全集。`data.validate.check_required_historical_members` 用于阻止 2021/2022 样本完全没有现已退市代表 `asset_id` 的情况。
 
 ## 进入阶段 1 的结论
@@ -44,7 +46,7 @@
 - ✅ 截面动量（OHLCV close）
 - ✅ 波动率排名（OHLCV 已实现波动率）
 - ✅ 成交量变化（OHLCV volume）
-- ✅ funding carry（funding rate history；退市 fallback 合约 funding=0 并披露偏差）
+- ✅ funding carry（Binance Vision monthly fundingRate archive；archive gaps 按 0 并披露偏差）
 
 降级 / 删除：
 - ⚠️ CVD/Trade Delta —— 仅未来录制，标注为确认项，不进历史回测
